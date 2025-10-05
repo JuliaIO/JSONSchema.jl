@@ -224,7 +224,7 @@ end
         \"required\": [\"foo\"]
     }""")
     @test typeof(schema) == Schema
-    @test typeof(schema.data) == Dict{String,Any}
+    @test typeof(schema.data) <: AbstractDict{String,Any}
     schema_2 = JSONSchema.Schema(false)
     @test typeof(schema_2) == Schema
     @test typeof(schema_2.data) == Bool
@@ -237,14 +237,13 @@ end
 
 @testset "errors" begin
     @test_throws(
-        ErrorException("missing property 'Foo' in $(Dict{String,Any}())."),
+        ErrorException("missing property 'Foo' in $(JSON.parse("{}"))."),
         JSONSchema.Schema("""{
             "type": "object",
             "properties": {"version": {"\$ref": "#/definitions/Foo"}},
             "definitions": {}
-        }""")
+        }"""),
     )
-
     @test_throws(
         ErrorException("unmanaged type in ref resolution $(Int64): 1."),
         JSONSchema.Schema("""{
