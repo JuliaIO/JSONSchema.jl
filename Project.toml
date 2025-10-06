@@ -14,7 +14,7 @@ JSON3 = "0f8b85d8-7281-11e9-16c2-39a750bddbf1"
 JSONSchemaJSON3Ext = "JSON3"
 
 [compat]
-JSON = "0.21"
+JSON = "0.21, 1"
 JSON3 = "1"
 URIs = "1"
 julia = "1.9"
