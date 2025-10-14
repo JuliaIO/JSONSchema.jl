@@ -18,12 +18,11 @@ jobs:
         version: ['1.10', '1']  # Test against LTS and current minor release
         os: [ubuntu-latest, macOS-latest, windows-latest]
         arch: [x64]
-        # Upstream bug: https://github.com/JuliaIO/JSON.jl/issues/386
-        # include:
+        include:
           # Also test against 32-bit Linux on LTS.
-          # - version: '1.10'
-          #   os: ubuntu-latest
-          #   arch: x86
+          - version: '1.10'
+            os: ubuntu-latest
+            arch: x86
     steps:
       - uses: actions/checkout@v4
       - uses: julia-actions/setup-julia@v2
