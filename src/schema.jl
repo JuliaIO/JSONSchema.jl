@@ -1,4 +1,4 @@
-# Copyright (c) 2018: fredo-dedup and contributors
+# Copyright (c) 2018-2026: fredo-dedup, quinnj, and contributors
 #
 # Use of this source code is governed by an MIT-style license that can be found
 # in the LICENSE.md file or at https://opensource.org/licenses/MIT.
@@ -906,30 +906,30 @@ function _validate_instance(schema_obj, instance, ::Type{T}, path::String, error
     if isstructtype(T) && isconcretetype(T) && haskey(schema_obj, "properties")
         properties = schema_obj["properties"]
         required = get(schema_obj, "required", String[])
-        
+
         style = StructUtils.DefaultStyle()
         all_field_tags = StructUtils.fieldtags(style, T)
-        
+
         for i in 1:fieldcount(T)
             fname = fieldname(T, i)
             ftype = fieldtype(T, i)
             fvalue = getfield(instance, fname)
-            
+
             # Get field tags
             field_tags = haskey(all_field_tags, fname) ? all_field_tags[fname] : nothing
             tags = field_tags isa NamedTuple && haskey(field_tags, :json) ? field_tags.json : nothing
-            
+
             # Skip ignored fields
             if tags isa NamedTuple && get(tags, :ignore, false)
                 continue
             end
-            
+
             # Get JSON name (may be renamed)
             json_name = string(fname)
             if tags isa NamedTuple && haskey(tags, :name)
                 json_name = string(tags.name)
             end
-            
+
             # Check if field is in schema
             if haskey(properties, json_name)
                 field_schema = properties[json_name]
@@ -1349,13 +1349,13 @@ function _validate_string(schema, tags, value::String, path::String, errors::Vec
     if min_len !== nothing && length(value) < min_len
         push!(errors, "$path: string length $(length(value)) is less than minimum $min_len")
     end
-    
+
     # Check maxLength
     max_len = get(schema, "maxLength", nothing)
     if max_len !== nothing && length(value) > max_len
         push!(errors, "$path: string length $(length(value)) exceeds maximum $max_len")
     end
-    
+
     # Check pattern
     pattern = get(schema, "pattern", nothing)
     if pattern !== nothing
@@ -1368,7 +1368,7 @@ function _validate_string(schema, tags, value::String, path::String, errors::Vec
             # Invalid regex pattern - skip validation
         end
     end
-    
+
     # Format validation (basic checks)
     format = get(schema, "format", nothing)
     if format !== nothing
@@ -1417,7 +1417,7 @@ function _validate_number(schema, tags, value::Number, path::String, errors::Vec
             push!(errors, "$path: value $value is less than minimum $min_val")
         end
     end
-    
+
     # Check maximum
     max_val = get(schema, "maximum", nothing)
     exclusive_max = get(schema, "exclusiveMaximum", false)
@@ -1428,7 +1428,7 @@ function _validate_number(schema, tags, value::Number, path::String, errors::Vec
             push!(errors, "$path: value $value exceeds maximum $max_val")
         end
     end
-    
+
     # Check multipleOf
     multiple = get(schema, "multipleOf", nothing)
     if multiple !== nothing
