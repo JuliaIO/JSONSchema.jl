@@ -1,82 +1,79 @@
 # JSONSchema.jl
 
-[![Build Status](https://github.com/fredo-dedup/JSONSchema.jl/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/fredo-dedup/JSONSchema.jl/actions?query=workflow%3ACI)
-[![codecov](https://codecov.io/gh/fredo-dedup/JSONSchema.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/fredo-dedup/JSONSchema.jl)
+[![CI](https://github.com/JuliaServices/JSONSchema.jl/actions/workflows/CI.yml/badge.svg?branch=master)](https://github.com/JuliaServices/JSONSchema.jl/actions?query=workflow%3ACI)
+[![codecov](https://codecov.io/gh/JuliaServices/JSONSchema.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/JuliaServices/JSONSchema.jl)
+[![Docs](https://img.shields.io/badge/docs-stable-blue.svg)](https://juliaservices.github.io/JSONSchema.jl/stable)
 
 ## Overview
 
-[JSONSchema.jl](https://github.com/fredo-dedup/JSONSchema.jl) is a JSON
-validation package for the [Julia](https://julialang.org/) programming language.
-Given a [validation schema](http://json-schema.org/specification.html), this
-package can verify if a JSON instance meets all the assertions that define a
-valid document.
+JSONSchema.jl generates JSON Schema (draft-07) from Julia types and validates
+instances against those schemas. It also supports validating data against
+hand-written JSON Schema objects. Field-level validation rules are provided via
+`StructUtils` tags.
 
-This package has been tested with the
+> **Upgrading from v1.x?** See the [v2.0 Migration Guide](https://juliaservices.github.io/JSONSchema.jl/stable/migration/) for breaking changes and upgrade instructions.
+
+The test harness is wired to the
 [JSON Schema Test Suite](https://github.com/json-schema-org/JSON-Schema-Test-Suite)
-for draft v4 and v6.
+for draft4, draft6, and draft7.
 
-## API
+## Installation
 
-Create a `Schema` object by passing a string:
 ```julia
-julia> my_schema = Schema("""{
-            "properties": {
-                "foo": {},
-                "bar": {}
-            },
-            "required": ["foo"]
-        }""")
-```
-passing a dictionary with the same structure as a schema:
-```julia
-julia> my_schema = Schema(
-            Dict(
-                "properties" => Dict(
-                    "foo" => Dict(),
-                    "bar" => Dict()
-                ),
-                "required" => ["foo"]
-            )
-        )
-```
-or by passing a parsed JSON file containing the schema:
-```julia
-julia> my_schema = Schema(JSON.parsefile(filename))
+using Pkg
+Pkg.add("JSONSchema")
 ```
 
-Check the validity of a parsed JSON instance by calling `validate` with the JSON
-instance `x` to be tested and the `schema`.
+## Usage
 
-If the validation succeeds, `validate` returns `nothing`:
+### Generate a schema from a Julia type
+
 ```julia
-julia> document = """{"foo": true}""";
+using JSONSchema, StructUtils
 
-julia> data_pass = JSON.parse(document)
-Dict{String,Bool} with 1 entry:
-  "foo" => true
+@defaults struct User
+    id::Int = 0 &(json=(minimum=1,),)
+    name::String = "" &(json=(minLength=1,),)
+    email::String = "" &(json=(format="email",),)
+end
 
-julia> validate(my_schema, data_pass)
+schema = JSONSchema.schema(User)
+user = User(1, "Alice", "alice@example.com")
+result = JSONSchema.validate(schema, user)
 
+result.is_valid  # true
 ```
 
-If the validation fails, a struct is returned that, when printed, explains the
-reason for the failure:
-```julia
-julia> data_fail = Dict("bar" => 12.5)
-Dict{String,Float64} with 1 entry:
-  "bar" => 12.5
+### Validate JSON data against a schema object
 
-julia> validate(my_schema, data_fail)
-Validation failed:
-path:         top-level
-instance:     Dict("bar"=>12.5)
-schema key:   required
-schema value: ["foo"]
+```julia
+using JSON, JSONSchema
+
+schema = JSONSchema.Schema(JSON.parse("""
+{
+  "type": "object",
+  "properties": {"foo": {"type": "integer"}},
+  "required": ["foo"]
+}
+"""))
+
+data = JSON.parse("""{"foo": 1}""")
+JSONSchema.isvalid(schema, data)  # true
 ```
 
-As a short-hand for `validate(schema, x) === nothing`, use
-`Base.isvalid(schema, x)`
+## Features
 
-Note that if `x` is a `String` in JSON format, you must use `JSON.parse(x)`
-before passing to `validate`, that is, JSONSchema operates on the parsed
-representation, not on the underlying `String` representation of the JSON data.
+- **Schema Generation**: Automatically generate JSON Schema from Julia struct definitions
+- **Type-Safe Validation**: Validate Julia instances against generated schemas
+- **StructUtils Integration**: Use field tags for validation rules (min/max, patterns, formats, etc.)
+- **Composition Support**: `oneOf`, `anyOf`, `allOf`, `not` combinators
+- **Reference Support**: `$ref` with `definitions` for complex/recursive types
+- **Format Validation**: Built-in validators for `email`, `uri`, `uuid`, `date-time`
+
+## Documentation
+
+See the [documentation](https://juliaservices.github.io/JSONSchema.jl/stable) for:
+- Complete API reference
+- Validation rules and field tags
+- Type mapping reference
+- Advanced usage with `$ref` and composition
