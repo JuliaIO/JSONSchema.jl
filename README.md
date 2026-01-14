@@ -1,8 +1,8 @@
 # JSONSchema.jl
 
-[![CI](https://github.com/JuliaServices/JSONSchema.jl/actions/workflows/CI.yml/badge.svg?branch=master)](https://github.com/JuliaServices/JSONSchema.jl/actions?query=workflow%3ACI)
-[![codecov](https://codecov.io/gh/JuliaServices/JSONSchema.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/JuliaServices/JSONSchema.jl)
-[![Docs](https://img.shields.io/badge/docs-stable-blue.svg)](https://juliaservices.github.io/JSONSchema.jl/stable)
+[![CI](https://github.com/JuliaIO/JSONSchema.jl/actions/workflows/CI.yml/badge.svg?branch=master)](https://github.com/JuliaIO/JSONSchema.jl/actions?query=workflow%3ACI)
+[![codecov](https://codecov.io/gh/JuliaIO/JSONSchema.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/JuliaIO/JSONSchema.jl)
+[![Docs](https://img.shields.io/badge/docs-stable-blue.svg)](https://juliaio.github.io/JSONSchema.jl/stable)
 
 ## Overview
 
@@ -11,7 +11,7 @@ instances against those schemas. It also supports validating data against
 hand-written JSON Schema objects. Field-level validation rules are provided via
 `StructUtils` tags.
 
-> **Upgrading from v1.x?** See the [v2.0 Migration Guide](https://juliaservices.github.io/JSONSchema.jl/stable/migration/) for breaking changes and upgrade instructions.
+> **Upgrading from v1.x?** See the [v2.0 Migration Guide](https://juliaio.github.io/JSONSchema.jl/stable/migration/) for breaking changes and upgrade instructions.
 
 The test harness is wired to the
 [JSON Schema Test Suite](https://github.com/json-schema-org/JSON-Schema-Test-Suite)
@@ -39,9 +39,8 @@ end
 
 schema = JSONSchema.schema(User)
 user = User(1, "Alice", "alice@example.com")
-result = JSONSchema.validate(schema, user)
 
-result.is_valid  # true
+isvalid(schema, user)  # true
 ```
 
 ### Validate JSON data against a schema object
@@ -58,7 +57,7 @@ schema = JSONSchema.Schema(JSON.parse("""
 """))
 
 data = JSON.parse("""{"foo": 1}""")
-JSONSchema.isvalid(schema, data)  # true
+isvalid(schema, data)  # true
 ```
 
 ## Features
@@ -72,7 +71,7 @@ JSONSchema.isvalid(schema, data)  # true
 
 ## Documentation
 
-See the [documentation](https://juliaservices.github.io/JSONSchema.jl/stable) for:
+See the [documentation](https://juliaio.github.io/JSONSchema.jl/stable) for:
 - Complete API reference
 - Validation rules and field tags
 - Type mapping reference

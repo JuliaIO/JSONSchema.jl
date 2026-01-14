@@ -1880,22 +1880,21 @@ end
         end
         schema = JSONSchema.schema(ValidateTest)
 
-        # Valid
+        # Valid - validate returns nothing on success
         instance = ValidateTest(15)
         res = JSONSchema.validate(schema, instance)
-        @test res isa JSONSchema.ValidationResult
-        @test res.is_valid == true
-        @test isempty(res.errors)
-        @test JSONSchema.isvalid(schema, instance) == true
+        @test res === nothing
+        @test isvalid(schema, instance) == true
 
-        # Invalid
+        # Invalid - validate returns ValidationResult on failure
         instance_invalid = ValidateTest(5)
         res_invalid = JSONSchema.validate(schema, instance_invalid)
+        @test res_invalid isa JSONSchema.ValidationResult
         @test res_invalid.is_valid == false
         @test !isempty(res_invalid.errors)
         @test length(res_invalid.errors) == 1
         @test occursin("less than minimum", res_invalid.errors[1])
-        @test JSONSchema.isvalid(schema, instance_invalid) == false
+        @test isvalid(schema, instance_invalid) == false
     end
 
     @testset "Improved Format Validation" begin
