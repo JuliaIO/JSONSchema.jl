@@ -1,3 +1,8 @@
+# Copyright (c) 2018: fredo-dedup and contributors
+#
+# Use of this source code is governed by an MIT-style license that can be found
+# in the LICENSE.md file or at https://opensource.org/licenses/MIT.
+
 # JSON Schema generation and validation from Julia types
 # Provides a simple, convenient interface for generating JSON Schema v7 specifications
 
@@ -5,7 +10,7 @@
     Schema{T}
 
 A typed JSON Schema for type `T`. Contains the schema specification and can be used
-for validation via `JSON.isvalid`.
+for validation via `isvalid` (which overloads `Base.isvalid`).
 
 # Fields
 - `type::Type{T}`: The Julia type this schema describes
@@ -13,9 +18,17 @@ for validation via `JSON.isvalid`.
 
 # Example
 ```julia
-schema = JSON.schema(User)
+using JSONSchema, StructUtils
+
+@defaults struct User
+    name::String = ""
+    email::String = ""
+    age::Int = 0
+end
+
+schema = JSONSchema.schema(User)
 instance = User("alice", "alice@example.com", 25)
-is_valid = JSON.isvalid(schema, instance)
+isvalid(schema, instance)  # returns true
 ```
 """
 # Context for tracking type definitions during schema generation with $ref support
@@ -759,15 +772,15 @@ struct ValidationResult
 end
 
 """
-    validate(schema::Schema{T}, instance::T) -> ValidationResult
+    validate(schema::Schema{T}, instance::T) -> Union{Nothing, ValidationResult}
 
 Validate that `instance` satisfies all constraints defined in `schema`.
-Returns a `ValidationResult` containing success status and any error messages.
+Returns `nothing` if valid, or a `ValidationResult` containing error messages if invalid.
 
 # Example
 ```julia
-result = JSON.validate(schema, instance)
-if !result.is_valid
+result = validate(schema, instance)
+if result !== nothing
     for err in result.errors
         println(err)
     end
@@ -778,7 +791,7 @@ function validate(schema::Schema{T}, instance::T; resolver=nothing) where {T}
     errors = String[]
     # Pass root schema for \$ref resolution
     _validate_instance(schema.spec, instance, T, "", errors, false, schema.spec)
-    return ValidationResult(isempty(errors), errors)
+    return isempty(errors) ? nothing : ValidationResult(false, errors)
 end
 
 # Also support JSON.Schema (which is an alias for JSONSchema.Schema)
@@ -819,12 +832,12 @@ function RefResolver(root; base_uri::AbstractString="", remote_loader=nothing)
 end
 
 """
-    isvalid(schema::Schema{T}, instance::T; verbose=false) -> Bool
+    Base.isvalid(schema::Schema{T}, instance::T; verbose=false) -> Bool
 
 Validate that `instance` satisfies all constraints defined in `schema`.
 
-This function checks that the instance meets all validation requirements specified
-in the schema's field tags, including:
+This function extends `Base.isvalid` and checks that the instance meets all
+validation requirements specified in the schema's field tags, including:
 - String constraints (minLength, maxLength, pattern, format)
 - Numeric constraints (minimum, maximum, exclusiveMinimum, exclusiveMaximum, multipleOf)
 - Array constraints (minItems, maxItems, uniqueItems)
@@ -841,52 +854,38 @@ in the schema's field tags, including:
 
 # Example
 ```julia
-JSON.@defaults struct User
+using JSONSchema, StructUtils
+
+@defaults struct User
     name::String = "" &(json=(minLength=1, maxLength=100),)
     age::Int = 0 &(json=(minimum=0, maximum=150),)
 end
 
-schema = JSON.schema(User)
+schema = JSONSchema.schema(User)
 user1 = User("Alice", 25)
 user2 = User("", 200)  # Invalid: empty name, age too high
 
 isvalid(schema, user1)  # true
 isvalid(schema, user2)  # false
-isvalid(schema, user2, verbose=true)  # false, with error messages
+isvalid(schema, user2; verbose=true)  # false, with error messages
 ```
 """
-function isvalid(schema::Schema{T}, instance::T; verbose::Bool=false) where {T}
+function Base.isvalid(schema::Schema{T}, instance::T; verbose::Bool=false) where {T}
     result = validate(schema, instance)
+    is_valid = result === nothing
 
-    if verbose && !result.is_valid
+    if verbose && !is_valid
         for err in result.errors
             println("  ❌ ", err)
         end
     end
 
-    return result.is_valid
+    return is_valid
 end
 
-# Also support JSON.Schema (which is an alias for JSONSchema.Schema)
-# and inverse argument order for v1.5.0 compatibility
-function isvalid(schema, instance; verbose::Bool=false)
-    # Handle inverse argument order (v1.5.0 compat): isvalid(data, schema)
-    if instance isa Schema
-        return isvalid(instance, schema; verbose=verbose)
-    end
-
-    # Handle JSON.Schema (which is aliased to JSONSchema.Schema)
-    # Since they're the same underlying type, we can just call validate directly
-    if typeof(schema).name.module === JSON && hasfield(typeof(schema), :type) && hasfield(typeof(schema), :spec)
-        result = validate(schema, instance)
-        if verbose && !result.is_valid
-            for err in result.errors
-                println("  ❌ ", err)
-            end
-        end
-        return result.is_valid
-    end
-    error("Unsupported schema type: $(typeof(schema))")
+# Also support inverse argument order for v1.5.0 compatibility
+function Base.isvalid(instance, schema::Schema; verbose::Bool=false)
+    return Base.isvalid(schema, instance; verbose=verbose)
 end
 
 # Internal: Validate an instance against a schema

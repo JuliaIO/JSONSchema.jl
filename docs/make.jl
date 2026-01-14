@@ -11,4 +11,4 @@ makedocs(
     ],
 )
 
-deploydocs(repo = "github.com/JuliaServices/JSONSchema.jl.git", push_preview = true)
+deploydocs(repo = "github.com/JuliaIO/JSONSchema.jl.git", push_preview = true)

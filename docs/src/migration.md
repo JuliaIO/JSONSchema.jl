@@ -10,32 +10,64 @@ JSONSchema.jl v2.0 introduces:
 - **Schema generation** from Julia types via `schema(T)`
 - **Type-safe validation** with `Schema{T}`
 - **StructUtils integration** for field-level validation rules
-- **`\$ref` support** for schema deduplication
+- **`$ref` support** for schema deduplication
 
 Most v1.x code will continue to work with minimal changes thanks to our
 backwards compatibility layer.
 
 ## Breaking Changes
 
-### 1. `validate()` Return Type
+### 1. `parent_dir` Keyword Argument Removed
 
-**This is the main breaking change.** The `validate` function now always returns
-a `ValidationResult` struct instead of `nothing` on success.
+The `Schema` constructor no longer accepts a `parent_dir` keyword argument for
+resolving local file `$ref` references.
+
+**v1.x:**
+```julia
+schema = Schema(spec; parent_dir="./schemas")
+```
+
+**v2.0:** Local file reference resolution is not currently supported. External
+`$ref` references should be resolved before creating the schema, or use the new
+`refs` keyword argument with `schema()` for type-based deduplication.
+
+### 2. `SingleIssue` Type Replaced by `ValidationResult`
+
+The `SingleIssue` type from v1.x has been replaced by `ValidationResult`. For
+backwards compatibility, `SingleIssue` is aliased to `ValidationResult`, so
+existing `isa` checks will continue to work.
 
 **v1.x:**
 ```julia
 result = validate(schema, data)
-if result === nothing
-    println("Valid!")
-else
-    println(result)  # SingleIssue with error details
+if result isa SingleIssue
+    println(result.x)       # The invalid value
+    println(result.path)    # JSON path to the error
 end
 ```
 
 **v2.0:**
 ```julia
 result = validate(schema, data)
-if result.is_valid
+if result !== nothing
+    for err in result.errors
+        println(err)  # Error message with path
+    end
+end
+```
+
+## API Compatibility
+
+The following v1.x patterns are fully supported in v2.0:
+
+### `validate()` Return Type (Unchanged)
+
+The `validate` function returns `nothing` on success and a `ValidationResult`
+on failure, matching v1.x behavior:
+
+```julia
+result = validate(schema, data)
+if result === nothing
     println("Valid!")
 else
     for err in result.errors
@@ -44,46 +76,15 @@ else
 end
 ```
 
-**Migration:** Replace `validate(...) === nothing` with `validate(...).is_valid`
-or use `isvalid(schema, data)` which returns a boolean.
+### `isvalid()` Function
 
-### 2. `JSON.schema`, `JSON.validate`, `JSON.isvalid` No Longer Available
+The `isvalid` function extends `Base.isvalid` and returns a boolean:
 
-The v1.x package registered convenience methods on the `JSON` module at runtime.
-This is no longer supported.
-
-**v1.x:**
 ```julia
 using JSONSchema
-JSON.isvalid(schema, data)  # Worked via runtime registration
+
+isvalid(schema, data)  # Returns true or false
 ```
-
-**v2.0:**
-```julia
-using JSONSchema
-JSONSchema.isvalid(schema, data)  # Use the JSONSchema namespace directly
-```
-
-**Migration:** Replace `JSON.schema`, `JSON.validate`, `JSON.isvalid` with
-`JSONSchema.schema`, `JSONSchema.validate`, `JSONSchema.isvalid`.
-
-### 3. `parent_dir` Keyword Argument Removed
-
-The `Schema` constructor no longer accepts a `parent_dir` keyword argument for
-resolving local file `\$ref` references.
-
-**v1.x:**
-```julia
-schema = Schema(spec; parent_dir="./schemas")
-```
-
-**v2.0:** Local file reference resolution is not currently supported. External
-`\$ref` references should be resolved before creating the schema, or use the new
-`refs` keyword argument with `schema()` for type-based deduplication.
-
-## Compatibility Layer
-
-The following v1.x patterns continue to work in v2.0:
 
 ### `schema.data` Field Access
 
@@ -119,11 +120,7 @@ isvalid(schema, Dict("bar" => 1))  # Returns false (v1.x behavior)
 diagnose(data, schema)  # Works but emits deprecation warning
 ```
 
-### `SingleIssue` Type
-
-```julia
-result isa SingleIssue  # Works - SingleIssue is aliased to ValidationResult
-```
+Use `validate(schema, data)` instead.
 
 ## New Features in v2.0
 
@@ -151,12 +148,12 @@ Schemas are now parameterized by the type they describe:
 ```julia
 schema = JSONSchema.schema(User)  # Returns Schema{User}
 user = User(1, "Alice", "alice@example.com", 30)
-JSONSchema.isvalid(schema, user)  # Type-safe validation
+isvalid(schema, user)  # Type-safe validation
 ```
 
-### `\$ref` Support for Deduplication
+### `$ref` Support for Deduplication
 
-Use `refs=true` to generate schemas with `\$ref` for nested types:
+Use `refs=true` to generate schemas with `$ref` for nested types:
 
 ```julia
 @defaults struct Address
@@ -170,7 +167,7 @@ end
 end
 
 schema = JSONSchema.schema(Person, refs=true)
-# Generates schema with `\$ref` to #/definitions/Address
+# Generates schema with `$ref` to #/definitions/Address
 ```
 
 ### ValidationResult with Error Details
@@ -179,7 +176,7 @@ Get detailed validation errors:
 
 ```julia
 result = JSONSchema.validate(schema, invalid_data)
-if !result.is_valid
+if result !== nothing
     for error in result.errors
         println(error)  # e.g., "name: string length 0 is less than minimum 1"
     end
@@ -188,13 +185,11 @@ end
 
 ## Quick Migration Checklist
 
-- [ ] Replace `validate(...) === nothing` with `validate(...).is_valid` or `isvalid(...)`
-- [ ] Replace `JSON.schema/validate/isvalid` with `JSONSchema.schema/validate/isvalid`
 - [ ] Remove `parent_dir` keyword from `Schema()` calls
 - [ ] Update error handling to use `ValidationResult.errors` instead of `SingleIssue` fields
 - [ ] Consider using `schema(T)` for type-based schema generation
 
 ## Getting Help
 
-If you encounter issues migrating, please [open an issue](https://github.com/JuliaServices/JSONSchema.jl/issues)
+If you encounter issues migrating, please [open an issue](https://github.com/JuliaIO/JSONSchema.jl/issues)
 with details about your use case.

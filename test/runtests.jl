@@ -72,7 +72,8 @@ function run_test_file(draft::String, path::String, data::Vector{UInt8}, failure
                     value = case["data"]
                     @testset "$case_desc" begin
                         result = try
-                            JSONSchema.validate(schema, value; resolver=resolver).is_valid
+                            # validate returns nothing on success, ValidationResult on failure
+                            JSONSchema.validate(schema, value; resolver=resolver) === nothing
                         catch
                             :error
                         end

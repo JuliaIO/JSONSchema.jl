@@ -13,8 +13,9 @@ end
 
 # ============= 2. Support inverse argument order =============
 # v1.5.0 supported both validate(schema, x) and validate(x, schema)
-# NOTE: This is now handled directly in schema.jl via the generic fallback methods
-# that check if the second argument is a Schema and swap arguments accordingly.
+function validate(instance, schema::Schema; resolver=nothing)
+    return validate(schema, instance; resolver=resolver)
+end
 
 # ============= 3. Support boolean schemas =============
 # v1.5.0 supported Schema(true) and Schema(false)
@@ -75,7 +76,7 @@ function diagnose(x, schema)
         :diagnose,
     )
     result = validate(schema, x)
-    if !result.is_valid && !isempty(result.errors)
+    if result !== nothing && !isempty(result.errors)
         return join(result.errors, "\n")
     end
     return nothing
