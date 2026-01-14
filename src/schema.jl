@@ -6,6 +6,25 @@
 # JSON Schema generation and validation from Julia types
 # Provides a simple, convenient interface for generating JSON Schema v7 specifications
 
+# Context for tracking type definitions during schema generation with $ref support
+mutable struct SchemaContext
+    # Map from Type to definition name
+    type_names::Dict{Type, String}
+    # Map from definition name to schema
+    definitions::Object{String, Any}
+    # Stack to detect circular references during generation
+    generation_stack::Vector{Type}
+    # Where to store definitions: :definitions (Draft 7) or :defs (Draft 2019+)
+    defs_location::Symbol
+
+    SchemaContext(defs_location::Symbol=:definitions) = new(
+        Dict{Type, String}(),
+        Object{String, Any}(),
+        Type[],
+        defs_location
+    )
+end
+
 """
     Schema{T}
 
@@ -31,25 +50,6 @@ instance = User("alice", "alice@example.com", 25)
 isvalid(schema, instance)  # returns true
 ```
 """
-# Context for tracking type definitions during schema generation with $ref support
-mutable struct SchemaContext
-    # Map from Type to definition name
-    type_names::Dict{Type, String}
-    # Map from definition name to schema
-    definitions::Object{String, Any}
-    # Stack to detect circular references during generation
-    generation_stack::Vector{Type}
-    # Where to store definitions: :definitions (Draft 7) or :defs (Draft 2019+)
-    defs_location::Symbol
-
-    SchemaContext(defs_location::Symbol=:definitions) = new(
-        Dict{Type, String}(),
-        Object{String, Any}(),
-        Type[],
-        defs_location
-    )
-end
-
 struct Schema{T}
     type::Type{T}
     spec::Object{String, Any}
@@ -906,30 +906,30 @@ function _validate_instance(schema_obj, instance, ::Type{T}, path::String, error
     if isstructtype(T) && isconcretetype(T) && haskey(schema_obj, "properties")
         properties = schema_obj["properties"]
         required = get(schema_obj, "required", String[])
-        
+
         style = StructUtils.DefaultStyle()
         all_field_tags = StructUtils.fieldtags(style, T)
-        
+
         for i in 1:fieldcount(T)
             fname = fieldname(T, i)
             ftype = fieldtype(T, i)
             fvalue = getfield(instance, fname)
-            
+
             # Get field tags
             field_tags = haskey(all_field_tags, fname) ? all_field_tags[fname] : nothing
             tags = field_tags isa NamedTuple && haskey(field_tags, :json) ? field_tags.json : nothing
-            
+
             # Skip ignored fields
             if tags isa NamedTuple && get(tags, :ignore, false)
                 continue
             end
-            
+
             # Get JSON name (may be renamed)
             json_name = string(fname)
             if tags isa NamedTuple && haskey(tags, :name)
                 json_name = string(tags.name)
             end
-            
+
             # Check if field is in schema
             if haskey(properties, json_name)
                 field_schema = properties[json_name]
@@ -1349,13 +1349,13 @@ function _validate_string(schema, tags, value::String, path::String, errors::Vec
     if min_len !== nothing && length(value) < min_len
         push!(errors, "$path: string length $(length(value)) is less than minimum $min_len")
     end
-    
+
     # Check maxLength
     max_len = get(schema, "maxLength", nothing)
     if max_len !== nothing && length(value) > max_len
         push!(errors, "$path: string length $(length(value)) exceeds maximum $max_len")
     end
-    
+
     # Check pattern
     pattern = get(schema, "pattern", nothing)
     if pattern !== nothing
@@ -1368,7 +1368,7 @@ function _validate_string(schema, tags, value::String, path::String, errors::Vec
             # Invalid regex pattern - skip validation
         end
     end
-    
+
     # Format validation (basic checks)
     format = get(schema, "format", nothing)
     if format !== nothing
@@ -1417,7 +1417,7 @@ function _validate_number(schema, tags, value::Number, path::String, errors::Vec
             push!(errors, "$path: value $value is less than minimum $min_val")
         end
     end
-    
+
     # Check maximum
     max_val = get(schema, "maximum", nothing)
     exclusive_max = get(schema, "exclusiveMaximum", false)
@@ -1428,7 +1428,7 @@ function _validate_number(schema, tags, value::Number, path::String, errors::Vec
             push!(errors, "$path: value $value exceeds maximum $max_val")
         end
     end
-    
+
     # Check multipleOf
     multiple = get(schema, "multipleOf", nothing)
     if multiple !== nothing
