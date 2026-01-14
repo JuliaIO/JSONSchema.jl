@@ -33,9 +33,8 @@ schema = Schema(spec; parent_dir="./schemas")
 
 ### 2. `SingleIssue` Type Replaced by `ValidationResult`
 
-The `SingleIssue` type from v1.x has been replaced by `ValidationResult`. For
-backwards compatibility, `SingleIssue` is aliased to `ValidationResult`, so
-existing `isa` checks will continue to work.
+The `SingleIssue` type from v1.x has been removed and replaced by
+`ValidationResult`.
 
 **v1.x:**
 ```julia
@@ -54,6 +53,31 @@ if result !== nothing
         println(err)  # Error message with path
     end
 end
+```
+
+### 3. `diagnose` Function
+
+The previously deprecated `diagnose` function has been removed. Use
+`validate(schema, data)` instead.
+
+### 4. Inverse Argument Order
+
+The `validate` and `isvalid` functions where `schema` is the second argument
+have been removed. `schema` must be the first argument.
+```julia
+validate(data, schema)  # old
+validate(schema, data)  # new
+
+isvalid(data, schema)  # old
+isvalid(schema, data)  # new
+```
+
+### 5. `required` Without `properties`
+
+v1.x supported non-standard schemas with `required` field and no `properties`.
+In v2.0, you must specify `properties` if `required` is present.
+```julia
+schema = Schema(Dict("type" => "object", "required" => ["foo"]))  # Not allowed
 ```
 
 ## API Compatibility
@@ -86,41 +110,12 @@ using JSONSchema
 isvalid(schema, data)  # Returns true or false
 ```
 
-### `schema.data` Field Access
-
-```julia
-schema = Schema(Dict("type" => "object"))
-schema.data["type"]  # Works - maps to schema.spec
-```
-
 ### Boolean Schemas
 
 ```julia
 Schema(true)   # Accepts everything
 Schema(false)  # Rejects everything
 ```
-
-### Inverse Argument Order
-
-```julia
-validate(data, schema)  # Works - swaps to validate(schema, data)
-isvalid(data, schema)   # Works - swaps to isvalid(schema, data)
-```
-
-### `required` Without `properties`
-
-```julia
-schema = Schema(Dict("type" => "object", "required" => ["foo"]))
-isvalid(schema, Dict("bar" => 1))  # Returns false (v1.x behavior)
-```
-
-### `diagnose` Function (Deprecated)
-
-```julia
-diagnose(data, schema)  # Works but emits deprecation warning
-```
-
-Use `validate(schema, data)` instead.
 
 ## New Features in v2.0
 

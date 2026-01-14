@@ -74,6 +74,17 @@ end
 Schema(spec::AbstractString) = Schema(JSON.parse(spec))
 Schema(spec::AbstractVector{UInt8}) = Schema(JSON.parse(spec))
 
+# Boolean schemas are part of the draft6 specification.
+function Schema(b::Bool)
+    if b
+        # true schema accepts everything - empty schema
+        return Schema{Any}(Any, Object{String, Any}(), nothing)
+    else
+        # false schema rejects everything - use "not: {}" pattern
+        return Schema{Any}(Any, Object{String, Any}("not" => Object{String, Any}()), nothing)
+    end
+end
+
 # Helper functions for $ref support
 
 """
@@ -797,11 +808,6 @@ end
 # Also support JSON.Schema (which is an alias for JSONSchema.Schema)
 # and inverse argument order for v1.5.0 compatibility
 function validate(schema, instance; resolver=nothing)
-    # Handle inverse argument order (v1.5.0 compat): validate(data, schema)
-    if instance isa Schema
-        return validate(instance, schema; resolver=resolver)
-    end
-
     # Handle JSON.Schema (which is aliased to JSONSchema.Schema)
     if typeof(schema).name.module === JSON && hasfield(typeof(schema), :type) && hasfield(typeof(schema), :spec)
         return validate(Schema{typeof(schema).parameters[1]}(schema.type, schema.spec, nothing), instance; resolver=resolver)
@@ -883,11 +889,6 @@ function Base.isvalid(schema::Schema{T}, instance::T; verbose::Bool=false) where
     return is_valid
 end
 
-# Also support inverse argument order for v1.5.0 compatibility
-function Base.isvalid(instance, schema::Schema; verbose::Bool=false)
-    return Base.isvalid(schema, instance; verbose=verbose)
-end
-
 # Internal: Validate an instance against a schema
 function _validate_instance(schema_obj, instance, ::Type{T}, path::String, errors::Vector{String}, verbose::Bool, root::Object{String, Any}) where {T}
     # Handle $ref - resolve and validate against resolved schema
@@ -906,30 +907,30 @@ function _validate_instance(schema_obj, instance, ::Type{T}, path::String, error
     if isstructtype(T) && isconcretetype(T) && haskey(schema_obj, "properties")
         properties = schema_obj["properties"]
         required = get(schema_obj, "required", String[])
-        
+
         style = StructUtils.DefaultStyle()
         all_field_tags = StructUtils.fieldtags(style, T)
-        
+
         for i in 1:fieldcount(T)
             fname = fieldname(T, i)
             ftype = fieldtype(T, i)
             fvalue = getfield(instance, fname)
-            
+
             # Get field tags
             field_tags = haskey(all_field_tags, fname) ? all_field_tags[fname] : nothing
             tags = field_tags isa NamedTuple && haskey(field_tags, :json) ? field_tags.json : nothing
-            
+
             # Skip ignored fields
             if tags isa NamedTuple && get(tags, :ignore, false)
                 continue
             end
-            
+
             # Get JSON name (may be renamed)
             json_name = string(fname)
             if tags isa NamedTuple && haskey(tags, :name)
                 json_name = string(tags.name)
             end
-            
+
             # Check if field is in schema
             if haskey(properties, json_name)
                 field_schema = properties[json_name]
@@ -1176,13 +1177,6 @@ function _validate_value(schema, value, ::Type{T}, tags, path::String, errors::V
 
     # Dict/Object validation (properties, patternProperties, propertyNames for Dicts)
     if value isa AbstractDict
-        # Validate required fields even without properties (v1.5.0 compat)
-        # This is called from compat.jl and handles the case where "required"
-        # is specified without "properties"
-        if !haskey(schema, "properties") && haskey(schema, "required")
-            _validate_required_for_dict(schema, value, path, errors)
-        end
-
         # Validate properties for Dict
         if haskey(schema, "properties")
             properties = schema["properties"]
@@ -1349,13 +1343,13 @@ function _validate_string(schema, tags, value::String, path::String, errors::Vec
     if min_len !== nothing && length(value) < min_len
         push!(errors, "$path: string length $(length(value)) is less than minimum $min_len")
     end
-    
+
     # Check maxLength
     max_len = get(schema, "maxLength", nothing)
     if max_len !== nothing && length(value) > max_len
         push!(errors, "$path: string length $(length(value)) exceeds maximum $max_len")
     end
-    
+
     # Check pattern
     pattern = get(schema, "pattern", nothing)
     if pattern !== nothing
@@ -1368,7 +1362,7 @@ function _validate_string(schema, tags, value::String, path::String, errors::Vec
             # Invalid regex pattern - skip validation
         end
     end
-    
+
     # Format validation (basic checks)
     format = get(schema, "format", nothing)
     if format !== nothing
@@ -1417,7 +1411,7 @@ function _validate_number(schema, tags, value::Number, path::String, errors::Vec
             push!(errors, "$path: value $value is less than minimum $min_val")
         end
     end
-    
+
     # Check maximum
     max_val = get(schema, "maximum", nothing)
     exclusive_max = get(schema, "exclusiveMaximum", false)
@@ -1428,7 +1422,7 @@ function _validate_number(schema, tags, value::Number, path::String, errors::Vec
             push!(errors, "$path: value $value exceeds maximum $max_val")
         end
     end
-    
+
     # Check multipleOf
     multiple = get(schema, "multipleOf", nothing)
     if multiple !== nothing
