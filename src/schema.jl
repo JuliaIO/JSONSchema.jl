@@ -6,6 +6,25 @@
 # JSON Schema generation and validation from Julia types
 # Provides a simple, convenient interface for generating JSON Schema v7 specifications
 
+# Context for tracking type definitions during schema generation with $ref support
+mutable struct SchemaContext
+    # Map from Type to definition name
+    type_names::Dict{Type, String}
+    # Map from definition name to schema
+    definitions::Object{String, Any}
+    # Stack to detect circular references during generation
+    generation_stack::Vector{Type}
+    # Where to store definitions: :definitions (Draft 7) or :defs (Draft 2019+)
+    defs_location::Symbol
+
+    SchemaContext(defs_location::Symbol=:definitions) = new(
+        Dict{Type, String}(),
+        Object{String, Any}(),
+        Type[],
+        defs_location
+    )
+end
+
 """
     Schema{T}
 
@@ -31,25 +50,6 @@ instance = User("alice", "alice@example.com", 25)
 isvalid(schema, instance)  # returns true
 ```
 """
-# Context for tracking type definitions during schema generation with $ref support
-mutable struct SchemaContext
-    # Map from Type to definition name
-    type_names::Dict{Type, String}
-    # Map from definition name to schema
-    definitions::Object{String, Any}
-    # Stack to detect circular references during generation
-    generation_stack::Vector{Type}
-    # Where to store definitions: :definitions (Draft 7) or :defs (Draft 2019+)
-    defs_location::Symbol
-
-    SchemaContext(defs_location::Symbol=:definitions) = new(
-        Dict{Type, String}(),
-        Object{String, Any}(),
-        Type[],
-        defs_location
-    )
-end
-
 struct Schema{T}
     type::Type{T}
     spec::Object{String, Any}
