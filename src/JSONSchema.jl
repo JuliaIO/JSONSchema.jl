@@ -13,6 +13,8 @@ using JSON: JSONWriteStyle, Object
 
 export Schema, SchemaContext, ValidationResult, schema, validate
 
-include("schema.jl")
+include("utils.jl")
+include("generation.jl")
+include("validation.jl")
 
 end
