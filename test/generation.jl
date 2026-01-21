@@ -58,21 +58,27 @@ using Test, JSON, JSONSchema, Dates, StructUtils
 
     @testset "String Validation Tags" begin
         @defaults struct StringValidation
-            email::String = "" &(json=(
-                description="Email address",
-                format="email",
-                minLength=5,
-                maxLength=100
-            ),)
-            username::String = "" &(json=(
-                pattern="^[a-zA-Z0-9_]+\$",
-                minLength=3,
-                maxLength=20
-            ),)
-            website::Union{String, Nothing} = nothing &(json=(
-                format="uri",
-                description="Personal website URL"
-            ),)
+            email::String = "" & (
+                json = (
+                    description = "Email address",
+                    format = "email",
+                    minLength = 5,
+                    maxLength = 100,
+                ),
+            )
+            username::String = "" & (
+                json = (
+                    pattern = "^[a-zA-Z0-9_]+\$",
+                    minLength = 3,
+                    maxLength = 20,
+                ),
+            )
+            website::Union{String, Nothing} = nothing & (
+                json = (
+                    format = "uri",
+                    description = "Personal website URL",
+                ),
+            )
         end
 
         schema = JSONSchema.schema(StringValidation)
@@ -96,21 +102,27 @@ using Test, JSON, JSONSchema, Dates, StructUtils
 
     @testset "Numeric Validation Tags" begin
         @defaults struct NumericValidation
-            age::Int = 0 &(json=(
-                minimum=0,
-                maximum=150,
-                description="Age in years"
-            ),)
-            price::Float64 = 0.0 &(json=(
-                minimum=0.0,
-                exclusiveMinimum=true,
-                description="Price must be positive"
-            ),)
-            percentage::Float64 = 0.0 &(json=(
-                minimum=0.0,
-                maximum=100.0,
-                multipleOf=0.1
-            ),)
+            age::Int = 0 & (
+                json = (
+                    minimum = 0,
+                    maximum = 150,
+                    description = "Age in years",
+                ),
+            )
+            price::Float64 = 0.0 & (
+                json = (
+                    minimum = 0.0,
+                    exclusiveMinimum = true,
+                    description = "Price must be positive",
+                ),
+            )
+            percentage::Float64 = 0.0 & (
+                json = (
+                    minimum = 0.0,
+                    maximum = 100.0,
+                    multipleOf = 0.1,
+                ),
+            )
         end
 
         schema = JSONSchema.schema(NumericValidation)
@@ -152,15 +164,19 @@ using Test, JSON, JSONSchema, Dates, StructUtils
 
     @testset "Array Validation Tags" begin
         @defaults struct ArrayValidation
-            tags::Vector{String} = String[] &(json=(
-                minItems=1,
-                maxItems=10,
-                description="List of tags"
-            ),)
-            unique_ids::Vector{Int} = Int[] &(json=(
-                uniqueItems=true,
-                minItems=1
-            ),)
+            tags::Vector{String} = String[] & (
+                json = (
+                    minItems = 1,
+                    maxItems = 10,
+                    description = "List of tags",
+                ),
+            )
+            unique_ids::Vector{Int} = Int[] & (
+                json = (
+                    uniqueItems = true,
+                    minItems = 1,
+                ),
+            )
         end
 
         schema = JSONSchema.schema(ArrayValidation)
@@ -174,7 +190,7 @@ using Test, JSON, JSONSchema, Dates, StructUtils
         @defaults struct Address
             street::String = ""
             city::String = ""
-            zipcode::String = "" &(json=(pattern="^[0-9]{5}\$",),)
+            zipcode::String = "" & (json = (pattern = "^[0-9]{5}\$",),)
         end
 
         @defaults struct Person
@@ -194,9 +210,9 @@ using Test, JSON, JSONSchema, Dates, StructUtils
 
     @testset "Field Renaming" begin
         @defaults struct RenamedFields
-            internal_id::Int = 0 &(json=(name="id",),)
-            first_name::String = "" &(json=(name="firstName",),)
-            last_name::String = "" &(json=(name="lastName",),)
+            internal_id::Int = 0 & (json = (name = "id",),)
+            first_name::String = "" & (json = (name = "firstName",),)
+            last_name::String = "" & (json = (name = "lastName",),)
         end
 
         schema = JSONSchema.schema(RenamedFields)
@@ -212,7 +228,7 @@ using Test, JSON, JSONSchema, Dates, StructUtils
     @testset "Ignored Fields" begin
         @defaults struct WithIgnored
             public_field::String = ""
-            private_field::String = "" &(json=(ignore=true,),)
+            private_field::String = "" & (json = (ignore = true,),)
             another_public::Int = 0
         end
 
@@ -226,14 +242,18 @@ using Test, JSON, JSONSchema, Dates, StructUtils
 
     @testset "Enum and Const" begin
         @defaults struct WithEnum
-            status::String = "pending" &(json=(
-                enum=["pending", "active", "inactive"],
-                description="Account status"
-            ),)
-            api_version::String = "v1" &(json=(
-                _const="v1",
-                description="API version (fixed)"
-            ),)
+            status::String = "pending" & (
+                json = (
+                    enum = ["pending", "active", "inactive"],
+                    description = "Account status",
+                ),
+            )
+            api_version::String = "v1" & (
+                json = (
+                    _const = "v1",
+                    description = "API version (fixed)",
+                ),
+            )
         end
 
         schema = JSONSchema.schema(WithEnum)
@@ -244,14 +264,18 @@ using Test, JSON, JSONSchema, Dates, StructUtils
 
     @testset "Examples and Default" begin
         @defaults struct WithExamples
-            color::String = "blue" &(json=(
-                examples=["red", "green", "blue"],
-                description="Favorite color"
-            ),)
-            count::Int = 10 &(json=(
-                default=10,
-                description="Default count"
-            ),)
+            color::String = "blue" & (
+                json = (
+                    examples = ["red", "green", "blue"],
+                    description = "Favorite color",
+                ),
+            )
+            count::Int = 10 & (
+                json = (
+                    default = 10,
+                    description = "Default count",
+                ),
+            )
         end
 
         schema = JSONSchema.schema(WithExamples)
@@ -319,9 +343,9 @@ using Test, JSON, JSONSchema, Dates, StructUtils
     @testset "Explicit Required Override" begin
         @defaults struct RequiredOverride
             # Explicitly mark as required even though it's Union{T, Nothing}
-            must_provide::Union{String, Nothing} = nothing &(json=(required=true,),)
+            must_provide::Union{String, Nothing} = nothing & (json = (required = true,),)
             # Explicitly mark as optional even though it's not a union
-            can_skip::String = "" &(json=(required=false,),)
+            can_skip::String = "" & (json = (required = false,),)
         end
 
         schema = JSONSchema.schema(RequiredOverride)
@@ -335,10 +359,11 @@ using Test, JSON, JSONSchema, Dates, StructUtils
             value::Int = 0
         end
 
-        schema = JSONSchema.schema(MyType,
-            title="Custom Title",
-            description="Custom description for the schema",
-            id="https://example.com/schemas/my-type.json"
+        schema = JSONSchema.schema(
+            MyType,
+            title = "Custom Title",
+            description = "Custom description for the schema",
+            id = "https://example.com/schemas/my-type.json"
         )
 
         @test schema["title"] == "Custom Title"
@@ -370,69 +395,88 @@ using Test, JSON, JSONSchema, Dates, StructUtils
     @testset "Comprehensive Example - User Registration" begin
         @defaults struct UserRegistration
             # Required fields with validation
-            username::String = "" &(json=(
-                description="Unique username for the account",
-                pattern="^[a-zA-Z0-9_]{3,20}\$",
-                minLength=3,
-                maxLength=20
-            ),)
+            username::String = "" & (
+                json = (
+                    description = "Unique username for the account",
+                    pattern = "^[a-zA-Z0-9_]{3,20}\$",
+                    minLength = 3,
+                    maxLength = 20,
+                ),
+            )
 
-            email::String = "" &(json=(
-                description="User's email address",
-                format="email",
-                maxLength=255
-            ),)
+            email::String = "" & (
+                json = (
+                    description = "User's email address",
+                    format = "email",
+                    maxLength = 255,
+                ),
+            )
 
-            password::String = "" &(json=(
-                description="Account password",
-                minLength=8,
-                maxLength=128,
-                pattern="^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d).*\$"
-            ),)
+            password::String = "" & (
+                json = (
+                    description = "Account password",
+                    minLength = 8,
+                    maxLength = 128,
+                    pattern = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d).*\$",
+                ),
+            )
 
-            age::Int = 0 &(json=(
-                description="User's age",
-                minimum=13,
-                maximum=150
-            ),)
+            age::Int = 0 & (
+                json = (
+                    description = "User's age",
+                    minimum = 13,
+                    maximum = 150,
+                ),
+            )
 
             # Optional fields
-            phone::Union{String, Nothing} = nothing &(json=(
-                description="Phone number",
-                pattern="^\\+?[1-9]\\d{1,14}\$"
-            ),)
+            phone::Union{String, Nothing} = nothing & (
+                json = (
+                    description = "Phone number",
+                    pattern = "^\\+?[1-9]\\d{1,14}\$",
+                ),
+            )
 
-            website::Union{String, Nothing} = nothing &(json=(
-                description="Personal website",
-                format="uri"
-            ),)
+            website::Union{String, Nothing} = nothing & (
+                json = (
+                    description = "Personal website",
+                    format = "uri",
+                ),
+            )
 
             # Array with validation
-            interests::Vector{String} = String[] &(json=(
-                description="List of interests",
-                minItems=1,
-                maxItems=10,
-                uniqueItems=true
-            ),)
+            interests::Vector{String} = String[] & (
+                json = (
+                    description = "List of interests",
+                    minItems = 1,
+                    maxItems = 10,
+                    uniqueItems = true,
+                ),
+            )
 
             # Enum field
-            account_type::String = "free" &(json=(
-                description="Type of account",
-                enum=["free", "premium", "enterprise"],
-                default="free"
-            ),)
+            account_type::String = "free" & (
+                json = (
+                    description = "Type of account",
+                    enum = ["free", "premium", "enterprise"],
+                    default = "free",
+                ),
+            )
 
             # Boolean field
-            newsletter::Bool = false &(json=(
-                description="Subscribe to newsletter",
-                default=false
-            ),)
+            newsletter::Bool = false & (
+                json = (
+                    description = "Subscribe to newsletter",
+                    default = false,
+                ),
+            )
         end
 
-        schema = JSONSchema.schema(UserRegistration,
-            title="User Registration Schema",
-            description="Schema for user registration endpoint",
-            id="https://api.example.com/schemas/user-registration.json"
+        schema = JSONSchema.schema(
+            UserRegistration,
+            title = "User Registration Schema",
+            description = "Schema for user registration endpoint",
+            id = "https://api.example.com/schemas/user-registration.json"
         )
 
         # Verify structure
@@ -474,65 +518,83 @@ using Test, JSON, JSONSchema, Dates, StructUtils
         @test schema["properties"]["account_type"]["enum"] == ["free", "premium", "enterprise"]
 
         # Output the schema as JSON for inspection
-        json_output = JSON.json(schema, pretty=true)
+        json_output = JSON.json(schema, pretty = true)
         @test occursin("User Registration Schema", json_output)
         @test occursin("email", json_output)
     end
 
     @testset "Nested Complex Example - E-commerce Product" begin
         @defaults struct Price
-            amount::Float64 = 0.0 &(json=(
-                description="Price amount",
-                minimum=0.0,
-                exclusiveMinimum=true
-            ),)
-            currency::String = "USD" &(json=(
-                description="Currency code",
-                pattern="^[A-Z]{3}\$",
-                default="USD"
-            ),)
+            amount::Float64 = 0.0 & (
+                json = (
+                    description = "Price amount",
+                    minimum = 0.0,
+                    exclusiveMinimum = true,
+                ),
+            )
+            currency::String = "USD" & (
+                json = (
+                    description = "Currency code",
+                    pattern = "^[A-Z]{3}\$",
+                    default = "USD",
+                ),
+            )
         end
 
         @defaults struct Dimensions
-            length::Float64 = 0.0 &(json=(minimum=0.0,),)
-            width::Float64 = 0.0 &(json=(minimum=0.0,),)
-            height::Float64 = 0.0 &(json=(minimum=0.0,),)
-            unit::String = "cm" &(json=(enum=["cm", "in", "m"],),)
+            length::Float64 = 0.0 & (json = (minimum = 0.0,),)
+            width::Float64 = 0.0 & (json = (minimum = 0.0,),)
+            height::Float64 = 0.0 & (json = (minimum = 0.0,),)
+            unit::String = "cm" & (json = (enum = ["cm", "in", "m"],),)
         end
 
         @defaults struct Product
-            id::String = "" &(json=(
-                description="Unique product identifier",
-                format="uuid"
-            ),)
-            name::String = "" &(json=(
-                description="Product name",
-                minLength=1,
-                maxLength=200
-            ),)
-            description::String = "" &(json=(
-                description="Product description",
-                maxLength=2000
-            ),)
+            id::String = "" & (
+                json = (
+                    description = "Unique product identifier",
+                    format = "uuid",
+                ),
+            )
+            name::String = "" & (
+                json = (
+                    description = "Product name",
+                    minLength = 1,
+                    maxLength = 200,
+                ),
+            )
+            description::String = "" & (
+                json = (
+                    description = "Product description",
+                    maxLength = 2000,
+                ),
+            )
             price::Price = Price()
-            dimensions::Union{Dimensions, Nothing} = nothing &(json=(
-                description="Product dimensions (optional)"
-            ),)
-            tags::Vector{String} = String[] &(json=(
-                description="Product tags",
-                uniqueItems=true,
-                maxItems=20
-            ),)
-            in_stock::Bool = true &(json=(
-                description="Whether the product is in stock"
-            ),)
-            quantity::Int = 0 &(json=(
-                description="Available quantity",
-                minimum=0
-            ),)
+            dimensions::Union{Dimensions, Nothing} = nothing & (
+                json = (
+                    description = "Product dimensions (optional)"
+                ),
+            )
+            tags::Vector{String} = String[] & (
+                json = (
+                    description = "Product tags",
+                    uniqueItems = true,
+                    maxItems = 20,
+                ),
+            )
+            in_stock::Bool = true & (
+                json = (
+                    description = "Whether the product is in stock"
+                ),
+            )
+            quantity::Int = 0 & (
+                json = (
+                    description = "Available quantity",
+                    minimum = 0,
+                ),
+            )
         end
 
-        schema = JSONSchema.schema(Product, title="Product Schema")
+        schema = JSONSchema.schema(Product, title = "Product Schema")
 
         # Verify nested Price object
         @test schema["properties"]["price"]["type"] == "object"
@@ -545,7 +607,7 @@ using Test, JSON, JSONSchema, Dates, StructUtils
         @test !("dimensions" in schema["required"])
 
         # Test full JSON serialization
-        json_output = JSON.json(schema, pretty=true)
+        json_output = JSON.json(schema, pretty = true)
         @test occursin("Product Schema", json_output)
         @test occursin("uuid", json_output)
         @test occursin("currency", json_output)
@@ -579,7 +641,7 @@ using Test, JSON, JSONSchema, Dates, StructUtils
     end
 
     @testset "Empty NamedTuple" begin
-        schema = JSONSchema.schema(@NamedTuple{}; all_fields_required=true, additionalProperties=false)
+        schema = JSONSchema.schema(@NamedTuple{}; all_fields_required = true, additionalProperties = false)
         @test schema["type"] == "object"
         @test haskey(schema, "properties")
         @test length(schema["properties"]) == 0
@@ -589,10 +651,12 @@ using Test, JSON, JSONSchema, Dates, StructUtils
 
     @testset "Title and Description from Tags" begin
         @defaults struct WithTitleDesc
-            value::Int = 0 &(json=(
-                title="Value Field",
-                description="An important value"
-            ),)
+            value::Int = 0 & (
+                json = (
+                    title = "Value Field",
+                    description = "An important value",
+                ),
+            )
         end
 
         schema = JSONSchema.schema(WithTitleDesc)
@@ -602,9 +666,9 @@ using Test, JSON, JSONSchema, Dates, StructUtils
 
     @testset "Validation - String Constraints" begin
         @defaults struct StringValidated
-            name::String = "" &(json=(minLength=3, maxLength=10),)
-            email::String = "" &(json=(format="email",),)
-            username::String = "" &(json=(pattern="^[a-z]+\$",),)
+            name::String = "" & (json = (minLength = 3, maxLength = 10),)
+            email::String = "" & (json = (format = "email",),)
+            username::String = "" & (json = (pattern = "^[a-z]+\$",),)
         end
 
         schema = JSONSchema.schema(StringValidated)
@@ -628,9 +692,9 @@ using Test, JSON, JSONSchema, Dates, StructUtils
 
     @testset "Validation - Numeric Constraints" begin
         @defaults struct NumericValidated
-            age::Int = 0 &(json=(minimum=0, maximum=150),)
-            price::Float64 = 0.0 &(json=(minimum=0.0, exclusiveMinimum=true),)
-            percentage::Float64 = 0.0 &(json=(multipleOf=0.5,),)
+            age::Int = 0 & (json = (minimum = 0, maximum = 150),)
+            price::Float64 = 0.0 & (json = (minimum = 0.0, exclusiveMinimum = true),)
+            percentage::Float64 = 0.0 & (json = (multipleOf = 0.5,),)
         end
 
         schema = JSONSchema.schema(NumericValidated)
@@ -654,8 +718,8 @@ using Test, JSON, JSONSchema, Dates, StructUtils
 
     @testset "Validation - Array Constraints" begin
         @defaults struct ArrayValidated
-            tags::Vector{String} = String[] &(json=(minItems=1, maxItems=5, uniqueItems=true),)
-            numbers::Vector{Int} = Int[] &(json=(minItems=2,),)
+            tags::Vector{String} = String[] & (json = (minItems = 1, maxItems = 5, uniqueItems = true),)
+            numbers::Vector{Int} = Int[] & (json = (minItems = 2,),)
         end
 
         schema = JSONSchema.schema(ArrayValidated)
@@ -679,8 +743,8 @@ using Test, JSON, JSONSchema, Dates, StructUtils
 
     @testset "Validation - Enum and Const" begin
         @defaults struct EnumValidated
-            status::String = "active" &(json=(enum=["active", "inactive", "pending"],),)
-            version::String = "v1" &(json=(_const="v1",),)
+            status::String = "active" & (json = (enum = ["active", "inactive", "pending"],),)
+            version::String = "v1" & (json = (_const = "v1",),)
         end
 
         schema = JSONSchema.schema(EnumValidated)
@@ -699,8 +763,8 @@ using Test, JSON, JSONSchema, Dates, StructUtils
 
     @testset "Validation - Optional Fields" begin
         @defaults struct OptionalValidated
-            required_field::String = "" &(json=(minLength=1,),)
-            optional_field::Union{String, Nothing} = nothing &(json=(minLength=5,),)
+            required_field::String = "" & (json = (minLength = 1,),)
+            optional_field::Union{String, Nothing} = nothing & (json = (minLength = 5,),)
         end
 
         schema = JSONSchema.schema(OptionalValidated)
@@ -720,11 +784,11 @@ using Test, JSON, JSONSchema, Dates, StructUtils
 
     @testset "Validation - Nested Structs" begin
         @defaults struct InnerValidated
-            value::Int = 0 &(json=(minimum=1, maximum=10),)
+            value::Int = 0 & (json = (minimum = 1, maximum = 10),)
         end
 
         @defaults struct OuterValidated
-            name::String = "" &(json=(minLength=1,),)
+            name::String = "" & (json = (minLength = 1,),)
             inner::InnerValidated = InnerValidated()
         end
 
@@ -743,59 +807,69 @@ using Test, JSON, JSONSchema, Dates, StructUtils
 
     @testset "Validation - Format Checks" begin
         @defaults struct FormatValidated
-            email::String = "" &(json=(format="email",),)
-            website::String = "" &(json=(format="uri",),)
-            uuid::String = "" &(json=(format="uuid",),)
-            timestamp::String = "" &(json=(format="date-time",),)
+            email::String = "" & (json = (format = "email",),)
+            website::String = "" & (json = (format = "uri",),)
+            uuid::String = "" & (json = (format = "uuid",),)
+            timestamp::String = "" & (json = (format = "date-time",),)
         end
 
         schema = JSONSchema.schema(FormatValidated)
 
         # Valid instance
-        @test JSONSchema.isvalid(schema, FormatValidated(
-            "user@example.com",
-            "https://example.com",
-            "550e8400-e29b-41d4-a716-446655440000",
-            "2023-01-01T12:00:00Z"
-        ))
+        @test JSONSchema.isvalid(
+            schema, FormatValidated(
+                "user@example.com",
+                "https://example.com",
+                "550e8400-e29b-41d4-a716-446655440000",
+                "2023-01-01T12:00:00Z"
+            )
+        )
 
         # Invalid: bad email
-        @test !JSONSchema.isvalid(schema, FormatValidated(
-            "not-an-email",
-            "https://example.com",
-            "550e8400-e29b-41d4-a716-446655440000",
-            "2023-01-01T12:00:00Z"
-        ))
+        @test !JSONSchema.isvalid(
+            schema, FormatValidated(
+                "not-an-email",
+                "https://example.com",
+                "550e8400-e29b-41d4-a716-446655440000",
+                "2023-01-01T12:00:00Z"
+            )
+        )
 
         # Invalid: bad URI
-        @test !JSONSchema.isvalid(schema, FormatValidated(
-            "user@example.com",
-            "not-a-uri",
-            "550e8400-e29b-41d4-a716-446655440000",
-            "2023-01-01T12:00:00Z"
-        ))
+        @test !JSONSchema.isvalid(
+            schema, FormatValidated(
+                "user@example.com",
+                "not-a-uri",
+                "550e8400-e29b-41d4-a716-446655440000",
+                "2023-01-01T12:00:00Z"
+            )
+        )
 
         # Invalid: bad UUID
-        @test !JSONSchema.isvalid(schema, FormatValidated(
-            "user@example.com",
-            "https://example.com",
-            "not-a-uuid",
-            "2023-01-01T12:00:00Z"
-        ))
+        @test !JSONSchema.isvalid(
+            schema, FormatValidated(
+                "user@example.com",
+                "https://example.com",
+                "not-a-uuid",
+                "2023-01-01T12:00:00Z"
+            )
+        )
 
         # Invalid: bad date-time
-        @test !JSONSchema.isvalid(schema, FormatValidated(
-            "user@example.com",
-            "https://example.com",
-            "550e8400-e29b-41d4-a716-446655440000",
-            "not-a-date"
-        ))
+        @test !JSONSchema.isvalid(
+            schema, FormatValidated(
+                "user@example.com",
+                "https://example.com",
+                "550e8400-e29b-41d4-a716-446655440000",
+                "not-a-date"
+            )
+        )
     end
 
     @testset "Validation - Verbose Mode" begin
         @defaults struct VerboseTest
-            name::String = "" &(json=(minLength=3,),)
-            age::Int = 0 &(json=(minimum=0, maximum=150),)
+            name::String = "" & (json = (minLength = 3,),)
+            age::Int = 0 & (json = (minimum = 0, maximum = 150),)
         end
 
         schema = JSONSchema.schema(VerboseTest)
@@ -806,17 +880,17 @@ using Test, JSON, JSONSchema, Dates, StructUtils
 
         # Test verbose=true (should print errors but we can't easily capture them)
         # Just verify it still returns false
-        @test !JSONSchema.isvalid(schema, invalid, verbose=true)
+        @test !JSONSchema.isvalid(schema, invalid, verbose = true)
     end
 
     @testset "Validation - Complex Real-World Example" begin
         @defaults struct ValidatedProduct
-            id::String = "" &(json=(format="uuid",),)
-            name::String = "" &(json=(minLength=1, maxLength=200),)
-            price::Float64 = 0.0 &(json=(minimum=0.0, exclusiveMinimum=true),)
-            tags::Vector{String} = String[] &(json=(uniqueItems=true, maxItems=10),)
+            id::String = "" & (json = (format = "uuid",),)
+            name::String = "" & (json = (minLength = 1, maxLength = 200),)
+            price::Float64 = 0.0 & (json = (minimum = 0.0, exclusiveMinimum = true),)
+            tags::Vector{String} = String[] & (json = (uniqueItems = true, maxItems = 10),)
             in_stock::Bool = true
-            quantity::Int = 0 &(json=(minimum=0,),)
+            quantity::Int = 0 & (json = (minimum = 0,),)
         end
 
         schema = JSONSchema.schema(ValidatedProduct)
@@ -836,192 +910,214 @@ using Test, JSON, JSONSchema, Dates, StructUtils
         @test !JSONSchema.isvalid(schema, ValidatedProduct("not-uuid", "Test", 19.99, ["tag"], true, 100))
 
         # Invalid: name too long
-        @test !JSONSchema.isvalid(schema, ValidatedProduct(
-            "550e8400-e29b-41d4-a716-446655440000",
-            repeat("a", 201),
-            19.99,
-            ["tag"],
-            true,
-            100
-        ))
+        @test !JSONSchema.isvalid(
+            schema, ValidatedProduct(
+                "550e8400-e29b-41d4-a716-446655440000",
+                repeat("a", 201),
+                19.99,
+                ["tag"],
+                true,
+                100
+            )
+        )
 
         # Invalid: price must be > 0
-        @test !JSONSchema.isvalid(schema, ValidatedProduct(
-            "550e8400-e29b-41d4-a716-446655440000",
-            "Test",
-            0.0,
-            ["tag"],
-            true,
-            100
-        ))
+        @test !JSONSchema.isvalid(
+            schema, ValidatedProduct(
+                "550e8400-e29b-41d4-a716-446655440000",
+                "Test",
+                0.0,
+                ["tag"],
+                true,
+                100
+            )
+        )
 
         # Invalid: duplicate tags
-        @test !JSONSchema.isvalid(schema, ValidatedProduct(
-            "550e8400-e29b-41d4-a716-446655440000",
-            "Test",
-            19.99,
-            ["tag", "tag"],
-            true,
-            100
-        ))
+        @test !JSONSchema.isvalid(
+            schema, ValidatedProduct(
+                "550e8400-e29b-41d4-a716-446655440000",
+                "Test",
+                19.99,
+                ["tag", "tag"],
+                true,
+                100
+            )
+        )
 
         # Invalid: negative quantity
-        @test !JSONSchema.isvalid(schema, ValidatedProduct(
-            "550e8400-e29b-41d4-a716-446655440000",
-            "Test",
-            19.99,
-            ["tag"],
-            true,
-            -5
-        ))
+        @test !JSONSchema.isvalid(
+            schema, ValidatedProduct(
+                "550e8400-e29b-41d4-a716-446655440000",
+                "Test",
+                19.99,
+                ["tag"],
+                true,
+                -5
+            )
+        )
     end
 end
 
-    @testset "Composition - Union Types (oneOf)" begin
-        # Julia Union types automatically generate oneOf schemas
-        @defaults struct UnionType
-            value::Union{Int, String} = 0
-        end
-
-        schema = JSONSchema.schema(UnionType)
-
-        # Check that oneOf was generated
-        @test haskey(schema["properties"]["value"], "oneOf")
-        @test length(schema["properties"]["value"]["oneOf"]) == 2
-
-        # Validate integer value
-        @test JSONSchema.isvalid(schema, UnionType(42))
-
-        # Validate string value
-        @test JSONSchema.isvalid(schema, UnionType("hello"))
+@testset "Composition - Union Types (oneOf)" begin
+    # Julia Union types automatically generate oneOf schemas
+    @defaults struct UnionType
+        value::Union{Int, String} = 0
     end
 
-    @testset "Composition - oneOf Manual" begin
-        # You can also manually specify oneOf with field tags
-        @defaults struct ManualOneOf
-            value::Int = 0 &(json=(
-                oneOf=[
+    schema = JSONSchema.schema(UnionType)
+
+    # Check that oneOf was generated
+    @test haskey(schema["properties"]["value"], "oneOf")
+    @test length(schema["properties"]["value"]["oneOf"]) == 2
+
+    # Validate integer value
+    @test JSONSchema.isvalid(schema, UnionType(42))
+
+    # Validate string value
+    @test JSONSchema.isvalid(schema, UnionType("hello"))
+end
+
+@testset "Composition - oneOf Manual" begin
+    # You can also manually specify oneOf with field tags
+    @defaults struct ManualOneOf
+        value::Int = 0 & (
+            json = (
+                oneOf = [
                     Dict("type" => "integer", "minimum" => 0, "maximum" => 10),
-                    Dict("type" => "integer", "minimum" => 100, "maximum" => 110)
+                    Dict("type" => "integer", "minimum" => 100, "maximum" => 110),
                 ],
-            ),)
-        end
-
-        schema = JSONSchema.schema(ManualOneOf)
-
-        # Valid: matches first schema (0-10)
-        @test JSONSchema.isvalid(schema, ManualOneOf(5))
-
-        # Valid: matches second schema (100-110)
-        @test JSONSchema.isvalid(schema, ManualOneOf(105))
-
-        # Invalid: matches neither schema (in the gap)
-        @test !JSONSchema.isvalid(schema, ManualOneOf(50))
-
-        # Invalid: matches both schemas (if we had overlap, this would fail)
-        # The value must match EXACTLY one schema
+            ),
+        )
     end
 
-    @testset "Composition - anyOf" begin
-        @defaults struct AnyOfExample
-            value::String = "" &(json=(
-                anyOf=[
+    schema = JSONSchema.schema(ManualOneOf)
+
+    # Valid: matches first schema (0-10)
+    @test JSONSchema.isvalid(schema, ManualOneOf(5))
+
+    # Valid: matches second schema (100-110)
+    @test JSONSchema.isvalid(schema, ManualOneOf(105))
+
+    # Invalid: matches neither schema (in the gap)
+    @test !JSONSchema.isvalid(schema, ManualOneOf(50))
+
+    # Invalid: matches both schemas (if we had overlap, this would fail)
+    # The value must match EXACTLY one schema
+end
+
+@testset "Composition - anyOf" begin
+    @defaults struct AnyOfExample
+        value::String = "" & (
+            json = (
+                anyOf = [
                     Dict("minLength" => 5),      # At least 5 chars
-                    Dict("pattern" => "^[A-Z]")  # OR starts with uppercase
+                    Dict("pattern" => "^[A-Z]"),  # OR starts with uppercase
                 ],
-            ),)
-        end
-
-        schema = JSONSchema.schema(AnyOfExample)
-
-        # Valid: matches first constraint (>= 5 chars)
-        @test JSONSchema.isvalid(schema, AnyOfExample("hello"))
-
-        # Valid: matches second constraint (starts with uppercase)
-        @test JSONSchema.isvalid(schema, AnyOfExample("Hi"))
-
-        # Valid: matches both constraints
-        @test JSONSchema.isvalid(schema, AnyOfExample("Hello"))
-
-        # Invalid: matches neither constraint
-        @test !JSONSchema.isvalid(schema, AnyOfExample("hi"))
+            ),
+        )
     end
 
-    @testset "Composition - allOf" begin
-        @defaults struct AllOfExample
-            value::String = "" &(json=(
-                allOf=[
+    schema = JSONSchema.schema(AnyOfExample)
+
+    # Valid: matches first constraint (>= 5 chars)
+    @test JSONSchema.isvalid(schema, AnyOfExample("hello"))
+
+    # Valid: matches second constraint (starts with uppercase)
+    @test JSONSchema.isvalid(schema, AnyOfExample("Hi"))
+
+    # Valid: matches both constraints
+    @test JSONSchema.isvalid(schema, AnyOfExample("Hello"))
+
+    # Invalid: matches neither constraint
+    @test !JSONSchema.isvalid(schema, AnyOfExample("hi"))
+end
+
+@testset "Composition - allOf" begin
+    @defaults struct AllOfExample
+        value::String = "" & (
+            json = (
+                allOf = [
                     Dict("minLength" => 5),      # At least 5 chars
-                    Dict("pattern" => "^[A-Z]")  # AND starts with uppercase
+                    Dict("pattern" => "^[A-Z]"),  # AND starts with uppercase
                 ],
-            ),)
-        end
-
-        schema = JSONSchema.schema(AllOfExample)
-
-        # Valid: matches both constraints
-        @test JSONSchema.isvalid(schema, AllOfExample("Hello"))
-        @test JSONSchema.isvalid(schema, AllOfExample("WORLD"))
-
-        # Invalid: doesn't match first constraint (too short)
-        @test !JSONSchema.isvalid(schema, AllOfExample("Hi"))
-
-        # Invalid: doesn't match second constraint (lowercase start)
-        @test !JSONSchema.isvalid(schema, AllOfExample("hello"))
+            ),
+        )
     end
 
-    @testset "Composition - Complex Union Types" begin
-        @defaults struct ComplexUnion3Types
-            # Union of three types
-            value::Union{Int, String, Bool} = 0
-        end
+    schema = JSONSchema.schema(AllOfExample)
 
-        schema = JSONSchema.schema(ComplexUnion3Types)
+    # Valid: matches both constraints
+    @test JSONSchema.isvalid(schema, AllOfExample("Hello"))
+    @test JSONSchema.isvalid(schema, AllOfExample("WORLD"))
 
-        # Check oneOf was generated with 3 options
-        @test haskey(schema["properties"]["value"], "oneOf")
-        @test length(schema["properties"]["value"]["oneOf"]) == 3
+    # Invalid: doesn't match first constraint (too short)
+    @test !JSONSchema.isvalid(schema, AllOfExample("Hi"))
 
-        # Validate each type
-        @test JSONSchema.isvalid(schema, ComplexUnion3Types(42))
-        @test JSONSchema.isvalid(schema, ComplexUnion3Types("hello"))
-        @test JSONSchema.isvalid(schema, ComplexUnion3Types(true))
+    # Invalid: doesn't match second constraint (lowercase start)
+    @test !JSONSchema.isvalid(schema, AllOfExample("hello"))
+end
+
+@testset "Composition - Complex Union Types" begin
+    @defaults struct ComplexUnion3Types
+        # Union of three types
+        value::Union{Int, String, Bool} = 0
     end
 
-    @testset "Composition - Nested Composition" begin
-        @defaults struct NestedComposition
-            value::Int = 0 &(json=(
-                anyOf=[
-                    Dict("allOf" => [
-                        Dict("minimum" => 0),
-                        Dict("maximum" => 10)
-                    ]),
-                    Dict("allOf" => [
-                        Dict("minimum" => 100),
-                        Dict("maximum" => 110)
-                    ])
+    schema = JSONSchema.schema(ComplexUnion3Types)
+
+    # Check oneOf was generated with 3 options
+    @test haskey(schema["properties"]["value"], "oneOf")
+    @test length(schema["properties"]["value"]["oneOf"]) == 3
+
+    # Validate each type
+    @test JSONSchema.isvalid(schema, ComplexUnion3Types(42))
+    @test JSONSchema.isvalid(schema, ComplexUnion3Types("hello"))
+    @test JSONSchema.isvalid(schema, ComplexUnion3Types(true))
+end
+
+@testset "Composition - Nested Composition" begin
+    @defaults struct NestedComposition
+        value::Int = 0 & (
+            json = (
+                anyOf = [
+                    Dict(
+                        "allOf" => [
+                            Dict("minimum" => 0),
+                            Dict("maximum" => 10),
+                        ]
+                    ),
+                    Dict(
+                        "allOf" => [
+                            Dict("minimum" => 100),
+                            Dict("maximum" => 110),
+                        ]
+                    ),
                 ],
-            ),)
-        end
-
-        schema = JSONSchema.schema(NestedComposition)
-
-        # Valid: in first range (0-10)
-        @test JSONSchema.isvalid(schema, NestedComposition(5))
-
-        # Valid: in second range (100-110)
-        @test JSONSchema.isvalid(schema, NestedComposition(105))
-
-        # Invalid: in neither range
-        @test !JSONSchema.isvalid(schema, NestedComposition(50))
+            ),
+        )
     end
+
+    schema = JSONSchema.schema(NestedComposition)
+
+    # Valid: in first range (0-10)
+    @test JSONSchema.isvalid(schema, NestedComposition(5))
+
+    # Valid: in second range (100-110)
+    @test JSONSchema.isvalid(schema, NestedComposition(105))
+
+    # Invalid: in neither range
+    @test !JSONSchema.isvalid(schema, NestedComposition(50))
+end
 
 @testset "Negation - not Combinator" begin
     # Test 1: not with enum
     @defaults struct ExcludedStatus
-        status::String = "" &(json=(
-            not=Dict("enum" => ["deleted", "archived"]),
-        ),)
+        status::String = "" & (
+            json = (
+                not = Dict("enum" => ["deleted", "archived"]),
+            ),
+        )
     end
 
     schema = JSONSchema.schema(ExcludedStatus)
@@ -1037,9 +1133,11 @@ end
 
     # Test 2: not with type constraint
     @defaults struct NotStringValue
-        value::Union{Int, Bool, Nothing} = nothing &(json=(
-            not=Dict("type" => "string"),
-        ),)
+        value::Union{Int, Bool, Nothing} = nothing & (
+            json = (
+                not = Dict("type" => "string"),
+            ),
+        )
     end
 
     schema2 = JSONSchema.schema(NotStringValue)
@@ -1051,9 +1149,11 @@ end
 
     # Test 3: not with numeric constraint
     @defaults struct ExcludedRange
-        value::Int = 0 &(json=(
-            not=Dict("minimum" => 10, "maximum" => 20),
-        ),)
+        value::Int = 0 & (
+            json = (
+                not = Dict("minimum" => 10, "maximum" => 20),
+            ),
+        )
     end
 
     schema3 = JSONSchema.schema(ExcludedRange)
@@ -1071,9 +1171,11 @@ end
 @testset "Array Contains" begin
     # Test 1: contains with enum - must have at least one priority tag
     @defaults struct TaskWithPriority
-        tags::Vector{String} = String[] &(json=(
-            contains=Dict("enum" => ["urgent", "important", "critical"]),
-        ),)
+        tags::Vector{String} = String[] & (
+            json = (
+                contains = Dict("enum" => ["urgent", "important", "critical"]),
+            ),
+        )
     end
 
     schema = JSONSchema.schema(TaskWithPriority)
@@ -1092,9 +1194,11 @@ end
 
     # Test 2: contains with pattern
     @defaults struct EmailList
-        emails::Vector{String} = String[] &(json=(
-            contains=Dict("pattern" => "^admin@"),
-        ),)
+        emails::Vector{String} = String[] & (
+            json = (
+                contains = Dict("pattern" => "^admin@"),
+            ),
+        )
     end
 
     schema2 = JSONSchema.schema(EmailList)
@@ -1108,9 +1212,11 @@ end
 
     # Test 3: contains with numeric constraint
     @defaults struct NumberList
-        numbers::Vector{Int} = Int[] &(json=(
-            contains=Dict("minimum" => 100),
-        ),)
+        numbers::Vector{Int} = Int[] & (
+            json = (
+                contains = Dict("minimum" => 100),
+            ),
+        )
     end
 
     schema3 = JSONSchema.schema(NumberList)
@@ -1141,12 +1247,14 @@ end
 
     # Test 2: Tuple with constraints via items tag
     @defaults struct LatLon
-        location::Tuple{Float64, Float64} = (0.0, 0.0) &(json=(
-            items=[
-                Dict("type" => "number", "minimum" => -90, "maximum" => 90),   # latitude
-                Dict("type" => "number", "minimum" => -180, "maximum" => 180)  # longitude
-            ],
-        ),)
+        location::Tuple{Float64, Float64} = (0.0, 0.0) & (
+            json = (
+                items = [
+                    Dict("type" => "number", "minimum" => -90, "maximum" => 90),   # latitude
+                    Dict("type" => "number", "minimum" => -180, "maximum" => 180),  # longitude
+                ],
+            ),
+        )
     end
 
     schema2 = JSONSchema.schema(LatLon)
@@ -1186,13 +1294,15 @@ end
 
     # Test 4: Tuple with specific constraints per position
     @defaults struct RGB
-        color::Tuple{Int, Int, Int} = (0, 0, 0) &(json=(
-            items=[
-                Dict("minimum" => 0, "maximum" => 255),  # R
-                Dict("minimum" => 0, "maximum" => 255),  # G
-                Dict("minimum" => 0, "maximum" => 255)   # B
-            ],
-        ),)
+        color::Tuple{Int, Int, Int} = (0, 0, 0) & (
+            json = (
+                items = [
+                    Dict("minimum" => 0, "maximum" => 255),  # R
+                    Dict("minimum" => 0, "maximum" => 255),  # G
+                    Dict("minimum" => 0, "maximum" => 255),   # B
+                ],
+            ),
+        )
     end
 
     schema4 = JSONSchema.schema(RGB)
@@ -1213,19 +1323,23 @@ end
     # Test combining not, contains, and tuple validation
     @defaults struct AdvancedValidation
         # Array that must contain a priority tag but not contain "spam"
-        tags::Vector{String} = String[] &(json=(
-            contains=Dict("enum" => ["urgent", "important"]),
-            not=Dict("contains" => Dict("const" => "spam")),
-        ),)
+        tags::Vector{String} = String[] & (
+            json = (
+                contains = Dict("enum" => ["urgent", "important"]),
+                not = Dict("contains" => Dict("const" => "spam")),
+            ),
+        )
 
         # Tuple with coordinate that must not be at origin
-        location::Tuple{Float64, Float64} = (0.0, 0.0) &(json=(
-            items=[
-                Dict("type" => "number"),
-                Dict("type" => "number")
-            ],
-            not=Dict("enum" => [(0.0, 0.0)]),
-        ),)
+        location::Tuple{Float64, Float64} = (0.0, 0.0) & (
+            json = (
+                items = [
+                    Dict("type" => "number"),
+                    Dict("type" => "number"),
+                ],
+                not = Dict("enum" => [(0.0, 0.0)]),
+            ),
+        )
     end
 
     schema = JSONSchema.schema(AdvancedValidation)
@@ -1238,14 +1352,18 @@ end
 
     # Test 2: Nested not with composition
     @defaults struct ComplexNot
-        value::Int = 0 &(json=(
-            # Must be positive but not in the range 10-20
-            minimum=0,
-            not=Dict("allOf" => [
-                Dict("minimum" => 10),
-                Dict("maximum" => 20)
-            ]),
-        ),)
+        value::Int = 0 & (
+            json = (
+                # Must be positive but not in the range 10-20
+                minimum = 0,
+                not = Dict(
+                    "allOf" => [
+                        Dict("minimum" => 10),
+                        Dict("maximum" => 20),
+                    ]
+                ),
+            ),
+        )
     end
 
     schema2 = JSONSchema.schema(ComplexNot)
@@ -1286,7 +1404,7 @@ end
         @test haskey(schema_inline.spec["properties"]["address"], "properties")
 
         # Test with refs=true (uses definitions)
-        schema_refs = JSONSchema.schema(RefPerson, refs=true)
+        schema_refs = JSONSchema.schema(RefPerson, refs = true)
         @test haskey(schema_refs.spec, "definitions")
         @test haskey(schema_refs.spec["definitions"], "RefAddress")
         @test haskey(schema_refs.spec["definitions"], "RefPerson")
@@ -1304,14 +1422,14 @@ end
         @test haskey(addr_def["properties"], "zip")
 
         # Test with refs=:defs (Draft 2019+)
-        schema_defs = JSONSchema.schema(RefPerson, refs=:defs)
+        schema_defs = JSONSchema.schema(RefPerson, refs = :defs)
         @test haskey(schema_defs.spec, "\$defs")
         @test haskey(schema_defs.spec["\$defs"], "RefAddress")
         @test haskey(schema_defs.spec["\$defs"], "RefPerson")
     end
 
     @testset "Circular References" begin
-        # Define circular types: RefUser ↔ RefComment
+        # Define circular types: RefUser <-> RefComment
         # Note: We use Int for author_id to avoid forward reference issues
         @defaults struct RefComment
             id::Int = 0
@@ -1330,7 +1448,7 @@ end
         @test schema_inline.spec["properties"]["comments"]["items"]["type"] == "object"
 
         # With refs, types should be deduplicated
-        schema_refs = JSONSchema.schema(RefUser, refs=true)
+        schema_refs = JSONSchema.schema(RefUser, refs = true)
 
         # Verify both types are in definitions
         @test haskey(schema_refs.spec, "definitions")
@@ -1359,7 +1477,7 @@ end
             featured_tag::Union{Nothing, RefTag} = nothing
         end
 
-        schema = JSONSchema.schema(RefPost, refs=true)
+        schema = JSONSchema.schema(RefPost, refs = true)
 
         # Both RefTag and RefPost should be in definitions
         @test haskey(schema.spec, "definitions")
@@ -1379,16 +1497,16 @@ end
 
     @testset "Validation with Refs" begin
         @defaults struct RefContactInfo
-            email::String = "" &(json=(format="email",),)
-            phone::String = "" &(json=(pattern="^\\d{3}-\\d{3}-\\d{4}\$",),)
+            email::String = "" & (json = (format = "email",),)
+            phone::String = "" & (json = (pattern = "^\\d{3}-\\d{3}-\\d{4}\$",),)
         end
 
         @defaults struct RefCustomer
-            name::String = "" &(json=(minLength=3,),)
+            name::String = "" & (json = (minLength = 3,),)
             contact::RefContactInfo = RefContactInfo()
         end
 
-        schema = JSONSchema.schema(RefCustomer, refs=true)
+        schema = JSONSchema.schema(RefCustomer, refs = true)
 
         # Valid customer
         valid_customer = RefCustomer("Alice", RefContactInfo("alice@example.com", "555-123-4567"))
@@ -1430,8 +1548,8 @@ end
         ctx = JSONSchema.SchemaContext()
 
         # Generate multiple schemas sharing the same context
-        employee_schema = JSONSchema.schema(RefEmployee, context=ctx)
-        project_schema = JSONSchema.schema(RefProject, context=ctx)
+        employee_schema = JSONSchema.schema(RefEmployee, context = ctx)
+        project_schema = JSONSchema.schema(RefProject, context = ctx)
 
         # Both schemas should have definitions
         @test haskey(employee_schema.spec, "definitions")
@@ -1457,7 +1575,7 @@ end
             metadata::Dict{String, String} = Dict{String, String}()
         end
 
-        schema = JSONSchema.schema(RefData, refs=true)
+        schema = JSONSchema.schema(RefData, refs = true)
 
         # Root type itself should be in definitions
         @test haskey(schema.spec, "definitions")
@@ -1487,7 +1605,7 @@ end
             nested::RefLevel2 = RefLevel2()
         end
 
-        schema = JSONSchema.schema(RefLevel1, refs=true)
+        schema = JSONSchema.schema(RefLevel1, refs = true)
 
         # All three levels should be in definitions
         @test haskey(schema.spec["definitions"], "RefLevel1")
@@ -1523,7 +1641,7 @@ end
             comments::Vector{RefBlogComment} = RefBlogComment[]
         end
 
-        schema = JSONSchema.schema(RefBlogPost, refs=true)
+        schema = JSONSchema.schema(RefBlogPost, refs = true)
 
         # All types should be defined
         @test haskey(schema.spec["definitions"], "RefBlogPost")
@@ -1540,7 +1658,7 @@ end
 
     @testset "Type Name Generation" begin
         # Test module-qualified names
-        schema = JSONSchema.schema(JSON.Object{String, Any}, refs=true)
+        schema = JSONSchema.schema(JSON.Object{String, Any}, refs = true)
         # Should handle parametric types
         @test schema.spec["type"] == "object"
 
@@ -1553,7 +1671,7 @@ end
             item::RefSimpleType = RefSimpleType()
         end
 
-        schema2 = JSONSchema.schema(RefContainer, refs=true)
+        schema2 = JSONSchema.schema(RefContainer, refs = true)
         # Should use simple name for Main module types
         @test haskey(schema2.spec["definitions"], "RefSimpleType")
     end
@@ -1827,7 +1945,7 @@ end
             "type" => "array",
             "items" => [
                 JSON.Object{String, Any}("type" => "string"),
-                JSON.Object{String, Any}("type" => "number")
+                JSON.Object{String, Any}("type" => "number"),
             ],
             "additionalItems" => false
         )
@@ -1846,7 +1964,7 @@ end
             "type" => "array",
             "items" => [
                 JSON.Object{String, Any}("type" => "string"),
-                JSON.Object{String, Any}("type" => "number")
+                JSON.Object{String, Any}("type" => "number"),
             ],
             "additionalItems" => JSON.Object{String, Any}("type" => "boolean")
         )
@@ -1881,7 +1999,7 @@ end
 @testset "Validation API and Formats" begin
     @testset "validate vs isvalid" begin
         @defaults struct ValidateTest
-            val::Int = 0 &(json=(minimum=10,),)
+            val::Int = 0 & (json = (minimum = 10,),)
         end
         schema = JSONSchema.schema(ValidateTest)
 
@@ -1904,9 +2022,9 @@ end
 
     @testset "Improved Format Validation" begin
         @defaults struct FormatTestV2
-            email::String = "" &(json=(format="email",),)
-            uri::String = "" &(json=(format="uri",),)
-            dt::String = "" &(json=(format="date-time",),)
+            email::String = "" & (json = (format = "email",),)
+            uri::String = "" & (json = (format = "uri",),)
+            dt::String = "" & (json = (format = "date-time",),)
         end
         schema = JSONSchema.schema(FormatTestV2)
 
