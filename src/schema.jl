@@ -74,6 +74,17 @@ end
 Schema(spec::AbstractString) = Schema(JSON.parse(spec))
 Schema(spec::AbstractVector{UInt8}) = Schema(JSON.parse(spec))
 
+# Boolean schemas are part of the draft6 specification.
+function Schema(b::Bool)
+    if b
+        # true schema accepts everything - empty schema
+        return Schema{Any}(Any, Object{String, Any}(), nothing)
+    else
+        # false schema rejects everything - use "not: {}" pattern
+        return Schema{Any}(Any, Object{String, Any}("not" => Object{String, Any}()), nothing)
+    end
+end
+
 # Helper functions for $ref support
 
 """
@@ -797,11 +808,6 @@ end
 # Also support JSON.Schema (which is an alias for JSONSchema.Schema)
 # and inverse argument order for v1.5.0 compatibility
 function validate(schema, instance; resolver=nothing)
-    # Handle inverse argument order (v1.5.0 compat): validate(data, schema)
-    if instance isa Schema
-        return validate(instance, schema; resolver=resolver)
-    end
-
     # Handle JSON.Schema (which is aliased to JSONSchema.Schema)
     if typeof(schema).name.module === JSON && hasfield(typeof(schema), :type) && hasfield(typeof(schema), :spec)
         return validate(Schema{typeof(schema).parameters[1]}(schema.type, schema.spec, nothing), instance; resolver=resolver)
@@ -881,11 +887,6 @@ function Base.isvalid(schema::Schema{T}, instance::T; verbose::Bool=false) where
     end
 
     return is_valid
-end
-
-# Also support inverse argument order for v1.5.0 compatibility
-function Base.isvalid(instance, schema::Schema; verbose::Bool=false)
-    return Base.isvalid(schema, instance; verbose=verbose)
 end
 
 # Internal: Validate an instance against a schema
@@ -1176,13 +1177,6 @@ function _validate_value(schema, value, ::Type{T}, tags, path::String, errors::V
 
     # Dict/Object validation (properties, patternProperties, propertyNames for Dicts)
     if value isa AbstractDict
-        # Validate required fields even without properties (v1.5.0 compat)
-        # This is called from compat.jl and handles the case where "required"
-        # is specified without "properties"
-        if !haskey(schema, "properties") && haskey(schema, "required")
-            _validate_required_for_dict(schema, value, path, errors)
-        end
-
         # Validate properties for Dict
         if haskey(schema, "properties")
             properties = schema["properties"]
