@@ -294,4 +294,19 @@ my_schema = Schema(
 """
 Schema(schema::String; kwargs...) = Schema(JSON.parse(schema); kwargs...)
 
+function Base.getproperty(schema::Schema, name::Symbol)
+    name === :spec && return getfield(schema, :data)
+    return getfield(schema, name)
+end
+
+function Base.propertynames(::Schema; private::Bool = false)
+    return private ? (:data, :spec) : (:data, :spec)
+end
+
+Base.getindex(schema::Schema, key) = schema.data[key]
+Base.haskey(schema::Schema, key) = haskey(schema.data, key)
+Base.get(schema::Schema, key, default) = get(schema.data, key, default)
+Base.keys(schema::Schema) = keys(schema.data)
+JSON.lower(schema::Schema) = schema.data
+
 Base.show(io::IO, ::Schema) = print(io, "A JSONSchema")

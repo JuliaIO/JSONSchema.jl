@@ -9,9 +9,10 @@ import Downloads
 import JSON
 import URIs
 
-export Schema, validate
+export Schema, schema, validate
 
 include("schema.jl")
+include("generation.jl")
 include("validation.jl")
 
 export diagnose

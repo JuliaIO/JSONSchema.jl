@@ -13,7 +13,7 @@ valid document.
 
 This package has been tested with the
 [JSON Schema Test Suite](https://github.com/json-schema-org/JSON-Schema-Test-Suite)
-for draft v4 and v6.
+for draft v4, v6, and v7.
 
 ## API
 
@@ -80,3 +80,23 @@ As a short-hand for `validate(schema, x) === nothing`, use
 Note that if `x` is a `String` in JSON format, you must use `JSON.parse(x)`
 before passing to `validate`, that is, JSONSchema operates on the parsed
 representation, not on the underlying `String` representation of the JSON data.
+
+Generate a `Schema` object from a Julia type by calling `schema`:
+```julia
+julia> params = schema(
+           @NamedTuple{query::String, limit::Union{Nothing,Int}};
+           additionalProperties = false,
+       )
+A JSONSchema
+
+julia> params.spec["required"]
+1-element Vector{String}:
+ "query"
+```
+
+The initial generator is intended for simple typed API parameters. It supports
+`NamedTuple`s, concrete structs, JSON scalar types, vectors, dictionaries,
+tuples, and nullable unions such as `Union{Nothing,String}`. Generated schemas
+are returned as ordinary `Schema` objects; the underlying dictionary is
+available as both `.data` and `.spec`, and `JSON.json(params)` serializes the
+generated schema.

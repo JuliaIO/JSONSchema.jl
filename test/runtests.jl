@@ -338,6 +338,9 @@ end
 
 @testset "exports" begin
     @test Schema === JSONSchema.Schema
+    @test schema === JSONSchema.schema
     @test validate === JSONSchema.validate
     @test diagnose === JSONSchema.diagnose
 end
+
+include("generation.jl")
