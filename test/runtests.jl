@@ -1,4 +1,4 @@
-# Copyright (c) 2018: fredo-dedup and contributors
+# Copyright (c) 2026: fredo-dedup, quinnj, and contributors
 #
 # Use of this source code is governed by an MIT-style license that can be found
 # in the LICENSE.md file or at https://opensource.org/licenses/MIT.
@@ -340,4 +340,9 @@ end
     @test Schema === JSONSchema.Schema
     @test validate === JSONSchema.validate
     @test diagnose === JSONSchema.diagnose
+    @test !(:schema in names(JSONSchema))
+    @test !(:spec in names(JSONSchema))
+    @test JSONSchema.schema(@NamedTuple{x::String}) isa JSONSchema.Schema
 end
+
+include("generation.jl")

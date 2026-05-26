@@ -1,4 +1,4 @@
-# Copyright (c) 2018: fredo-dedup and contributors
+# Copyright (c) 2026: fredo-dedup, quinnj, and contributors
 #
 # Use of this source code is governed by an MIT-style license that can be found
 # in the LICENSE.md file or at https://opensource.org/licenses/MIT.
@@ -293,5 +293,18 @@ my_schema = Schema(
 ```
 """
 Schema(schema::String; kwargs...) = Schema(JSON.parse(schema); kwargs...)
+
+"""
+    spec(schema::Schema)
+
+Return the parsed dictionary or boolean backing `schema`.
+"""
+spec(schema::Schema) = schema.data
+
+Base.getindex(schema::Schema, key) = schema.data[key]
+Base.haskey(schema::Schema, key) = haskey(schema.data, key)
+Base.get(schema::Schema, key, default) = get(schema.data, key, default)
+Base.keys(schema::Schema) = keys(schema.data)
+JSON.lower(schema::Schema) = schema.data
 
 Base.show(io::IO, ::Schema) = print(io, "A JSONSchema")

@@ -1,6 +1,6 @@
 The JSONSchema.jl package is licensed under the MIT "Expat" License:
 
-> Copyright (c) 2018: fredo.
+> Copyright (c) 2026: fredo-dedup, quinnj, and contributors.
 >
 > Permission is hereby granted, free of charge, to any person obtaining a copy
 > of this software and associated documentation files (the "Software"), to deal
