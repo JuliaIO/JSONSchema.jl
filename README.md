@@ -81,22 +81,33 @@ Note that if `x` is a `String` in JSON format, you must use `JSON.parse(x)`
 before passing to `validate`, that is, JSONSchema operates on the parsed
 representation, not on the underlying `String` representation of the JSON data.
 
-Generate a `Schema` object from a Julia type by calling `schema`:
+Generate a `Schema` object from a Julia type by calling `JSONSchema.schema`:
 ```julia
-julia> params = schema(
+julia> params = JSONSchema.schema(
            @NamedTuple{query::String, limit::Union{Nothing,Int}};
            additionalProperties = false,
        )
 A JSONSchema
 
-julia> params.spec["required"]
+julia> JSONSchema.spec(params)["required"]
 1-element Vector{String}:
  "query"
 ```
 
-The initial generator is intended for simple typed API parameters. It supports
-`NamedTuple`s, concrete structs, JSON scalar types, vectors, dictionaries,
-tuples, and nullable unions such as `Union{Nothing,String}`. Generated schemas
-are returned as ordinary `Schema` objects; the underlying dictionary is
-available as both `.data` and `.spec`, and `JSON.json(params)` serializes the
-generated schema.
+`JSONSchema.schema` is intentionally not exported, to avoid clashing with common
+names in user code. The initial generator is intended for simple typed API
+parameters. It supports `NamedTuple`s, concrete structs, JSON scalar types,
+vectors, dictionaries, tuples, and nullable unions such as
+`Union{Nothing,String}`.
+
+The generator emits an inline subset of JSON Schema that is valid for draft v7
+by default: `type`, `properties`, `required`, `additionalProperties`, `items`,
+`additionalItems`, `anyOf`, and nullable primitive type arrays. Passing `draft`
+sets the generated `"$schema"` URI; draft 2019-09 and 2020-12 also use
+`prefixItems` for tuple schemas. The generator does not infer validation
+constraints such as string patterns, numeric ranges, formats, enums, recursive
+references, or schema definitions.
+
+Generated schemas are returned as ordinary `Schema` objects; the underlying
+dictionary is available as `.data` or through `JSONSchema.spec(params)`, and
+`JSON.json(params)` serializes the generated schema.

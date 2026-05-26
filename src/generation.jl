@@ -1,4 +1,4 @@
-# Copyright (c) 2018: fredo-dedup and contributors
+# Copyright (c) 2026: fredo-dedup, quinnj, and contributors
 #
 # Use of this source code is governed by an MIT-style license that can be found
 # in the LICENSE.md file or at https://opensource.org/licenses/MIT.
@@ -6,7 +6,7 @@
 const DEFAULT_GENERATED_DRAFT = "https://json-schema.org/draft-07/schema#"
 
 """
-    schema(::Type{T}; kwargs...) where {T}
+    JSONSchema.schema(T::Type; kwargs...)
 
 Generate a small JSON Schema for Julia data type `T`.
 
@@ -25,12 +25,12 @@ Keyword arguments:
 in this first pass.
 """
 function schema(
-    ::Type{T};
+    @nospecialize(T::Type);
     draft::AbstractString = DEFAULT_GENERATED_DRAFT,
     refs = false,
     all_fields_required::Bool = false,
     additionalProperties::Union{Nothing,Bool} = nothing,
-) where {T}
+)
     generated = _schema_for_type(T; all_fields_required, draft)
     generated["\$schema"] = String(draft)
     if additionalProperties !== nothing
@@ -40,10 +40,10 @@ function schema(
 end
 
 function _schema_for_type(
-    ::Type{T};
+    @nospecialize(T::Type);
     all_fields_required::Bool,
     draft::AbstractString,
-) where {T}
+)
     if T === Any
         return Dict{String,Any}()
     elseif T === Nothing || T === Missing
@@ -59,12 +59,7 @@ function _schema_for_type(
     elseif T <: Real
         return Dict{String,Any}("type" => "number")
     elseif T <: NamedTuple
-        return _object_schema(
-            fieldnames(T),
-            fieldtypes(T);
-            all_fields_required,
-            draft,
-        )
+        return _object_schema(T; all_fields_required, draft)
     elseif T <: AbstractVector
         return _array_schema(eltype(T); all_fields_required, draft)
     elseif T <: Tuple
@@ -72,24 +67,21 @@ function _schema_for_type(
     elseif T <: AbstractDict
         return _dict_schema(T; all_fields_required, draft)
     elseif isconcretetype(T) && isstructtype(T)
-        return _object_schema(
-            fieldnames(T),
-            fieldtypes(T);
-            all_fields_required,
-            draft,
-        )
+        return _object_schema(T; all_fields_required, draft)
     else
         return Dict{String,Any}()
     end
 end
 
-_is_union_type(::Type{T}) where {T} = T isa Union
+function _is_union_type(@nospecialize(T::Type))
+    return T isa Union
+end
 
 function _union_schema(
-    ::Type{T};
+    @nospecialize(T::Type);
     all_fields_required::Bool,
     draft::AbstractString,
-) where {T}
+)
     union_types = Base.uniontypes(T)
     nullable = any(t -> t === Nothing || t === Missing, union_types)
     non_null_types = filter(t -> t !== Nothing && t !== Missing, union_types)
@@ -99,11 +91,8 @@ function _union_schema(
     end
 
     if length(non_null_types) == 1
-        schema = _schema_for_type(
-            first(non_null_types);
-            all_fields_required,
-            draft,
-        )
+        schema =
+            _schema_for_type(first(non_null_types); all_fields_required, draft)
         nullable && return _nullable_schema(schema)
         return schema
     end
@@ -135,10 +124,10 @@ function _nullable_schema(schema::AbstractDict)
 end
 
 function _array_schema(
-    ::Type{T};
+    @nospecialize(T::Type);
     all_fields_required::Bool,
     draft::AbstractString,
-) where {T}
+)
     return Dict{String,Any}(
         "type" => "array",
         "items" => _schema_for_type(T; all_fields_required, draft),
@@ -146,20 +135,21 @@ function _array_schema(
 end
 
 function _tuple_schema(
-    ::Type{T};
+    @nospecialize(T::Type);
     all_fields_required::Bool,
     draft::AbstractString,
-) where {T}
+)
     parameters = collect(T.parameters)
     if _is_unbounded_vararg_tuple(parameters)
-        fixed_parameters = parameters[1:end-1]
+        fixed_parameters = parameters[1:(end-1)]
         vararg_type = getfield(parameters[end], :T)
         if isempty(fixed_parameters)
             return _array_schema(vararg_type; all_fields_required, draft)
         end
 
         fixed_schemas = Any[
-            _schema_for_type(t; all_fields_required, draft) for t in fixed_parameters
+            _schema_for_type(t; all_fields_required, draft) for
+            t in fixed_parameters
         ]
         generated = Dict{String,Any}(
             "type" => "array",
@@ -167,28 +157,19 @@ function _tuple_schema(
         )
         if _uses_prefix_items(draft)
             generated["prefixItems"] = fixed_schemas
-            generated["items"] = _schema_for_type(
-                vararg_type;
-                all_fields_required,
-                draft,
-            )
+            generated["items"] =
+                _schema_for_type(vararg_type; all_fields_required, draft)
         else
             generated["items"] = fixed_schemas
-            generated["additionalItems"] = _schema_for_type(
-                vararg_type;
-                all_fields_required,
-                draft,
-            )
+            generated["additionalItems"] =
+                _schema_for_type(vararg_type; all_fields_required, draft)
         end
         return generated
     end
 
     tuple_types = fieldtypes(T)
     if isempty(tuple_types)
-        return Dict{String,Any}(
-            "type" => "array",
-            "maxItems" => 0,
-        )
+        return Dict{String,Any}("type" => "array", "maxItems" => 0)
     end
 
     tuple_schemas = Any[
@@ -219,10 +200,10 @@ function _uses_prefix_items(draft::AbstractString)
 end
 
 function _dict_schema(
-    ::Type{T};
+    @nospecialize(T::Type);
     all_fields_required::Bool,
     draft::AbstractString,
-) where {T}
+)
     value_schema = _schema_for_type(valtype(T); all_fields_required, draft)
     return Dict{String,Any}(
         "type" => "object",
@@ -231,35 +212,28 @@ function _dict_schema(
 end
 
 function _object_schema(
-    names,
-    types::Tuple;
+    @nospecialize(T::Type);
     all_fields_required::Bool,
     draft::AbstractString,
 )
     properties = Dict{String,Any}()
     required = String[]
-    for (name, type) in zip(names, types)
+    for (name, type) in zip(fieldnames(T), fieldtypes(T))
         field_name = string(name)
-        properties[field_name] = _schema_for_type(
-            type;
-            all_fields_required,
-            draft,
-        )
+        properties[field_name] =
+            _schema_for_type(type; all_fields_required, draft)
         if all_fields_required || _is_required_type(type)
             push!(required, field_name)
         end
     end
-    generated = Dict{String,Any}(
-        "type" => "object",
-        "properties" => properties,
-    )
+    generated = Dict{String,Any}("type" => "object", "properties" => properties)
     if !isempty(required)
         generated["required"] = required
     end
     return generated
 end
 
-function _is_required_type(::Type{T}) where {T}
+function _is_required_type(@nospecialize(T::Type))
     return !(Nothing <: T) && !(Missing <: T)
 end
 

@@ -1,4 +1,4 @@
-# Copyright (c) 2018: fredo-dedup and contributors
+# Copyright (c) 2026: fredo-dedup, quinnj, and contributors
 #
 # Use of this source code is governed by an MIT-style license that can be found
 # in the LICENSE.md file or at https://opensource.org/licenses/MIT.
@@ -9,7 +9,7 @@ import Downloads
 import JSON
 import URIs
 
-export Schema, schema, validate
+export Schema, validate
 
 include("schema.jl")
 include("generation.jl")

@@ -1,4 +1,4 @@
-# Copyright (c) 2018: fredo-dedup and contributors
+# Copyright (c) 2026: fredo-dedup, quinnj, and contributors
 #
 # Use of this source code is governed by an MIT-style license that can be found
 # in the LICENSE.md file or at https://opensource.org/licenses/MIT.
@@ -294,14 +294,12 @@ my_schema = Schema(
 """
 Schema(schema::String; kwargs...) = Schema(JSON.parse(schema); kwargs...)
 
-function Base.getproperty(schema::Schema, name::Symbol)
-    name === :spec && return getfield(schema, :data)
-    return getfield(schema, name)
-end
+"""
+    spec(schema::Schema)
 
-function Base.propertynames(::Schema; private::Bool = false)
-    return private ? (:data, :spec) : (:data, :spec)
-end
+Return the parsed dictionary or boolean backing `schema`.
+"""
+spec(schema::Schema) = schema.data
 
 Base.getindex(schema::Schema, key) = schema.data[key]
 Base.haskey(schema::Schema, key) = haskey(schema.data, key)
