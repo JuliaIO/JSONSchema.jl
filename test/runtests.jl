@@ -13,6 +13,7 @@ import OrderedCollections
 import ZipFile
 
 include("additional_patterns.jl")
+include("integer_floats.jl")
 
 const TEST_SUITE_URL = "https://github.com/json-schema-org/JSON-Schema-Test-Suite/archive/23.1.0.zip"
 
