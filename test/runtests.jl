@@ -633,7 +633,6 @@ end
     end
 end
 
-
 function check_reference_pointer(payload, ref; parent_dir = pwd())
     raw = merge(
         payload,
