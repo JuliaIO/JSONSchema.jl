@@ -567,6 +567,73 @@ end
     ) == "#"
 end
 
+function scalar_validation_batch(schema)
+    for _ in 1:1000
+        @assert JSONSchema.validate(schema, 1) === nothing
+    end
+    return nothing
+end
+
+@testset "Reference tracking allocation and behavior" begin
+    scalar = JSONSchema.Schema(Dict("type" => "integer"))
+    scalar_validation_batch(scalar)
+    @test @allocated(scalar_validation_batch(scalar)) <= 80_000
+    @test JSONSchema.validate(JSONSchema.Schema(true), 1) === nothing
+    issue = JSONSchema.validate(JSONSchema.Schema(false), 1)
+    @test issue.x == 1
+    @test issue.reason == "schema"
+    @test issue.path == ""
+    @test JSONSchema.json_pointer(issue) == "#"
+
+    for terminal in (true, false, Dict("type" => "integer"))
+        schema = JSONSchema.Schema(
+            Dict(
+                "definitions" => Dict(
+                    "a" => Dict("\$ref" => "#/definitions/b"),
+                    "b" => terminal,
+                ),
+                "\$ref" => "#/definitions/a",
+            ),
+        )
+        result = JSONSchema.validate(schema, 1)
+        @test (result === nothing) == (terminal !== false)
+        if result !== nothing
+            @test result.reason == "schema"
+            @test JSONSchema.json_pointer(result) == "#"
+        end
+    end
+    schema = JSONSchema.Schema(
+        Dict(
+            "definitions" => Dict(
+                "a" => Dict("\$ref" => "#/definitions/b"),
+                "b" => Dict("type" => "integer"),
+            ),
+            "\$ref" => "#/definitions/a",
+        ),
+    )
+    issue = JSONSchema.validate(schema, "bad")
+    @test issue.reason == "type"
+    @test issue.x == "bad"
+    @test JSONSchema.json_pointer(issue) == "#"
+    @test JSONSchema.validate(schema, 2) === nothing
+
+    for definitions in (
+        Dict("a" => Dict("\$ref" => "#/definitions/a")),
+        Dict(
+            "a" => Dict("\$ref" => "#/definitions/b"),
+            "b" => Dict("\$ref" => "#/definitions/a"),
+        ),
+    )
+        schema = JSONSchema.Schema(
+            Dict("definitions" => definitions, "\$ref" => "#/definitions/a"),
+        )
+        @test_throws ErrorException(
+            "cannot support circular references in schema.",
+        ) JSONSchema.validate(schema, 1)
+    end
+end
+
+
 function check_reference_pointer(payload, ref; parent_dir = pwd())
     raw = merge(
         payload,

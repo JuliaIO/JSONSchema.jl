@@ -160,9 +160,12 @@ function _validate_entry(x, schema::Bool, path::_InstancePath)
     return
 end
 
-function _resolve_refs(schema::AbstractDict, explored_refs = Any[schema])
+function _resolve_refs(schema::AbstractDict, explored_refs = nothing)
     if !haskey(schema, "\$ref")
         return schema
+    end
+    if explored_refs === nothing
+        explored_refs = Any[schema]
     end
     schema = schema["\$ref"]
     if any(x -> x === schema, explored_refs)
@@ -171,7 +174,7 @@ function _resolve_refs(schema::AbstractDict, explored_refs = Any[schema])
     push!(explored_refs, schema)
     return _resolve_refs(schema, explored_refs)
 end
-_resolve_refs(schema, explored_refs = Any[]) = schema
+_resolve_refs(schema, explored_refs = nothing) = schema
 
 # Default fallback
 _validate(::Any, ::Any, ::Val, ::Any, ::_InstancePath) = nothing
