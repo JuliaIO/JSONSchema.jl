@@ -12,6 +12,8 @@ import JSON3
 import OrderedCollections
 import ZipFile
 
+include("additional_patterns.jl")
+
 const TEST_SUITE_URL = "https://github.com/json-schema-org/JSON-Schema-Test-Suite/archive/23.1.0.zip"
 
 const SCHEMA_TEST_DIR = let

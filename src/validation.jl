@@ -489,9 +489,15 @@ function _validate(
 )
     properties = get(schema, "properties", Dict{String,Any}())
     patternProperties = get(schema, "patternProperties", Dict{String,Any}())
+    patterns = nothing
     for (k, v) in x
-        if k in keys(properties) ||
-           any(r -> match(Regex(r), k) !== nothing, keys(patternProperties))
+        if k in keys(properties)
+            continue
+        end
+        if patterns === nothing
+            patterns = [Regex(r) for r in keys(patternProperties)]
+        end
+        if any(r -> occursin(r, k), patterns)
             continue
         end
         ret = _validate_child(v, val, path, string(k))
@@ -514,9 +520,15 @@ function _validate(
     end
     properties = get(schema, "properties", Dict{String,Any}())
     patternProperties = get(schema, "patternProperties", Dict{String,Any}())
+    patterns = nothing
     for (k, v) in x
-        if k in keys(properties) ||
-           any(r -> match(Regex(r), k) !== nothing, keys(patternProperties))
+        if k in keys(properties)
+            continue
+        end
+        if patterns === nothing
+            patterns = [Regex(r) for r in keys(patternProperties)]
+        end
+        if any(r -> occursin(r, k), patterns)
             continue
         end
         return SingleIssue(x, path, "additionalProperties", val)
