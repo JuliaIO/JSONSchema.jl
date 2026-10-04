@@ -15,6 +15,7 @@ import ZipFile
 include("additional_patterns.jl")
 include("integer_floats.jl")
 include("string_instances.jl")
+include("vector_instances.jl")
 
 const TEST_SUITE_URL = "https://github.com/json-schema-org/JSON-Schema-Test-Suite/archive/23.1.0.zip"
 

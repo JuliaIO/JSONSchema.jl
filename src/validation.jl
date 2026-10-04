@@ -385,8 +385,8 @@ function _validate(
 end
 
 function _additional_items(x, num_items, val, path)
-    for i in (num_items+1):length(x)
-        ret = _validate_child(x[i], val, path, i)
+    for (i, xi) in enumerate(Iterators.drop(x, num_items))
+        ret = _validate_child(xi, val, path, num_items + i)
         if ret !== nothing
             return ret
         end
@@ -581,7 +581,7 @@ function _validate(
 end
 
 _is_type(::Any, ::Val) = false
-_is_type(::Array, ::Val{:array}) = true
+_is_type(::Union{Array,AbstractVector}, ::Val{:array}) = true
 _is_type(::Bool, ::Val{:boolean}) = true
 _is_type(::Integer, ::Val{:integer}) = true
 _is_type(x::AbstractFloat, ::Val{:integer}) = isinteger(x)
