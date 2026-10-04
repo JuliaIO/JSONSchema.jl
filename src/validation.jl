@@ -467,7 +467,7 @@ function _validate(
     for (k_val, v_val) in val
         r = Regex(k_val)
         for (k_x, v_x) in x
-            if match(r, k_x) === nothing
+            if !occursin(r, k_x)
                 continue
             end
             ret = _validate_child(v_x, v_val, path, string(k_x))
