@@ -358,3 +358,43 @@ end
 end
 
 include("generation.jl")
+
+@testset "patternProperties issue paths" begin
+    integer_schema = Dict("type" => "integer")
+    pattern_schema = Dict("patternProperties" => Dict("^x" => integer_schema))
+    schema = JSONSchema.Schema(pattern_schema)
+    for key in ("xyz", "x]", "x/y", "xλ")
+        issue = JSONSchema.validate(schema, Dict(key => "bad"))
+        @test issue.path == "[$(key)]"
+        @test issue.reason == "type"
+        @test issue.x == "bad"
+        @test occursin("path:         [$(key)]\n", sprint(show, issue))
+        @test JSONSchema.validate(schema, Dict(key => 1)) === nothing
+    end
+
+    schema = JSONSchema.Schema(
+        Dict("properties" =>
+                Dict("outer" => Dict("items" => pattern_schema))),
+    )
+    issue = JSONSchema.validate(schema, Dict("outer" => [Dict("xyz" => "bad")]))
+    @test issue.path == "[outer][1][xyz]"
+    @test issue.reason == "type"
+    @test JSONSchema.validate(schema, Dict("outer" => [Dict("xyz" => 1)])) ===
+          nothing
+
+    schema = JSONSchema.Schema(
+        Dict("patternProperties" => Dict("^outer" => pattern_schema)),
+    )
+    issue = JSONSchema.validate(schema, Dict("outer" => Dict("xyz" => "bad")))
+    @test issue.path == "[outer][xyz]"
+    @test issue.reason == "type"
+    @test JSONSchema.validate(schema, Dict("outer" => Dict("xyz" => 1))) ===
+          nothing
+
+    schema = JSONSchema.Schema(Dict("patternProperties" => Dict("^x" => false)))
+    issue = JSONSchema.validate(schema, Dict("xyz" => 1))
+    @test issue.path == "[xyz]"
+    @test issue.reason == "schema"
+    @test issue.val === false
+    @test JSONSchema.validate(schema, Dict("other" => "bad")) === nothing
+end
