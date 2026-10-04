@@ -3,16 +3,9 @@
 # Use of this source code is governed by an MIT-style license that can be found
 # in the LICENSE.md file or at https://opensource.org/licenses/MIT.
 
-# Transform escaped characters in JPaths back to their original value.
+# Decode a JSON Pointer token after URI percent decoding.
 function unescape_jpath(raw::String)
-    ret = replace(replace(raw, "~0" => "~"), "~1" => "/")
-    m = match(r"%([0-9A-F]{2})", ret)
-    if m !== nothing
-        for c in m.captures
-            ret = replace(ret, "%$(c)" => Char(parse(UInt8, "0x$(c)")))
-        end
-    end
-    return ret
+    return replace(replace(raw, "~1" => "/"), "~0" => "~")
 end
 
 function type_to_dict(x)
@@ -43,7 +36,7 @@ function update_id(uri::URIs.URI, s::String)
 end
 
 function get_element(schema, path::AbstractString)
-    elements = split(path, "/"; keepempty = true)
+    elements = split(URIs.unescapeuri(path), "/"; keepempty = true)
     if isempty(first(elements))
         popfirst!(elements)
     end
@@ -101,8 +94,9 @@ function find_ref(
         return id_map[path] # An exact path exists. Get it.
     elseif path == "" || path == "#"  # This path refers to the root schema.
         return id_map[string(uri)]
-    elseif startswith(path, "#/")  # This path is a JPointer.
-        return get_element(id_map[string(uri)], path[3:end])
+    elseif startswith(path, "#") &&
+           startswith(URIs.unescapeuri(path[2:end]), "/")
+        return get_element(id_map[string(uri)], path[2:end])
     end
     uri = update_id(uri, path)
     els = type_to_dict(uri)

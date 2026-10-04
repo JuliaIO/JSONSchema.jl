@@ -632,3 +632,104 @@ end
         ) JSONSchema.validate(schema, 1)
     end
 end
+
+function check_reference_pointer(payload, ref; parent_dir = pwd())
+    raw = merge(
+        payload,
+        Dict("properties" => Dict("value" => Dict("\$ref" => ref))),
+    )
+    schema = JSONSchema.Schema(raw; parent_dir = parent_dir)
+    @test JSONSchema.validate(schema, Dict("value" => 1)) === nothing
+    issue = JSONSchema.validate(schema, Dict("value" => "bad"))
+    @test issue isa JSONSchema.SingleIssue
+    @test issue.reason == "type"
+    @test issue.path == "[value]"
+    @test JSONSchema.json_pointer(issue) == "#/value"
+    @test raw["properties"]["value"]["\$ref"] == ref
+end
+
+@testset "Reference JSON pointer decoding" begin
+    for (key, encoded) in (
+        ("~1", "~01"),
+        ("~01", "~001"),
+        ("~", "~0"),
+        ("a/b", "a~1b"),
+        ("λ", "%CE%BB"),
+        ("λ", "%ce%bb"),
+        ("😄", "%F0%9F%98%84"),
+        ("a^|b", "a%5E%7Cb"),
+        ("a^|b", "a%5e%7cb"),
+        ("~1", "%7E01"),
+        ("a/b", "a%7E1b"),
+        ("%2F", "%252F"),
+        ("100%", "100%25"),
+        ("+", "+"),
+        (" ", "%20"),
+        ("\0", "%00"),
+        ("", ""),
+    )
+        @testset "key $key through $encoded" begin
+            payload =
+                Dict("definitions" => Dict(key => Dict("type" => "integer")))
+            check_reference_pointer(payload, "#/definitions/" * encoded)
+        end
+    end
+    @testset "empty root key" begin
+        check_reference_pointer(Dict("" => Dict("type" => "integer")), "#/")
+    end
+    @testset "nested empty root key" begin
+        check_reference_pointer(
+            Dict("" => Dict("target" => Dict("type" => "integer"))),
+            "#//target",
+        )
+    end
+    for ref in (
+        "#/definitions%2Ftarget",
+        "#%2Fdefinitions%2Ftarget",
+        "#%2fdefinitions%2ftarget",
+    )
+        @testset "encoded separators $ref" begin
+            payload = Dict(
+                "definitions" =>
+                    Dict("target" => Dict("type" => "integer")),
+            )
+            check_reference_pointer(payload, ref)
+        end
+    end
+    @testset "encoded slash selects separate tokens" begin
+        payload = Dict(
+            "definitions" => Dict(
+                "a/b" => Dict("type" => "string"),
+                "a" => Dict("b" => Dict("type" => "integer")),
+            ),
+        )
+        check_reference_pointer(payload, "#/definitions/a%2Fb")
+    end
+    @testset "local file fragments" begin
+        mktempdir() do dir
+            payload = Dict(
+                "definitions" => Dict(
+                    "λ" => Dict("type" => "integer"),
+                    "~1" => Dict("type" => "integer"),
+                    "a" => Dict("b" => Dict("type" => "integer")),
+                ),
+                "" => Dict("type" => "integer"),
+            )
+            write(joinpath(dir, "schema.json"), JSON.json(payload))
+            for fragment in (
+                "#/definitions/%CE%BB",
+                "#/definitions/~01",
+                "#%2Fdefinitions%2Fa%2Fb",
+                "#/",
+            )
+                @testset "$fragment" begin
+                    check_reference_pointer(
+                        Dict{String,Any}(),
+                        "schema.json" * fragment;
+                        parent_dir = dir,
+                    )
+                end
+            end
+        end
+    end
+end
