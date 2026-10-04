@@ -74,6 +74,25 @@ schema key:   required
 schema value: ["foo"]
 ```
 
+Use `JSONSchema.json_pointer(issue)` to locate a failure with a standard JSON
+Pointer URI fragment. It distinguishes array indices from object keys and escapes
+special characters in keys:
+
+```julia
+julia> s = Schema(Dict("properties" => Dict("foo" => Dict("items" => Dict("type" => "integer")))));
+
+julia> issue = validate(s, Dict("foo" => [1, "bad"]));
+
+julia> issue.path
+"[foo][2]"
+
+julia> JSONSchema.json_pointer(issue)
+"#/foo/1"
+```
+
+Root failures return `"#"`. The existing `issue.path` string and printed issue
+format remain available. The pointer method is namespaced and is not exported.
+
 As a short-hand for `validate(schema, x) === nothing`, use
 `Base.isvalid(schema, x)`
 
