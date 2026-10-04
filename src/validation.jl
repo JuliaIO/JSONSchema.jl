@@ -393,7 +393,7 @@ function _validate(
             if match(r, k_x) === nothing
                 continue
             end
-            ret = _validate(v_x, v_val, path * "[$(k_x)")
+            ret = _validate(v_x, v_val, path * "[$(k_x)]")
             if ret !== nothing
                 return ret
             end
