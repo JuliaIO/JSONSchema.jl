@@ -3,8 +3,10 @@
 # Use of this source code is governed by an MIT-style license that can be found
 # in the LICENSE.md file or at https://opensource.org/licenses/MIT.
 
-# Decode a JSON Pointer token after URI percent decoding.
+# Validate and decode a JSON Pointer token after URI percent decoding.
 function unescape_jpath(raw::String)
+    occursin(r"~(?![01])", raw) &&
+        error("invalid JSON Pointer escape in '$(raw)'.")
     return replace(replace(raw, "~1" => "/"), "~0" => "~")
 end
 

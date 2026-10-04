@@ -809,3 +809,76 @@ end
         @test raw["\$ref"] == "#/definitions/" * token
     end
 end
+
+@testset "Reference token escape syntax" begin
+    for (key, token) in (
+        ("~", "~0"),
+        ("~2", "~02"),
+        ("a~b", "a~0b"),
+        ("~~", "~0~0"),
+        ("~/~", "~0~1~0"),
+        ("/", "~1"),
+        ("~1", "~01"),
+        ("~01", "~001"),
+        ("λ~2", "%CE%BB~02"),
+        ("~", "%7E0"),
+        ("~2", "%7e02"),
+        ("%7E2", "%257E2"),
+    )
+        raw = Dict(
+            "definitions" => Dict(key => Dict("type" => "integer")),
+            "\$ref" => "#/definitions/" * token,
+        )
+        schema = JSONSchema.Schema(raw)
+        @test JSONSchema.validate(schema, 1) === nothing
+        @test JSONSchema.validate(schema, "bad") isa JSONSchema.SingleIssue
+        @test raw["\$ref"] == "#/definitions/" * token
+    end
+    for (key, token) in (
+        ("~", "~"),
+        ("name~", "name~"),
+        ("~2", "~2"),
+        ("a~b", "a~b"),
+        ("~0~", "~00~"),
+        ("~1~2", "~01~2"),
+        ("~~", "~~0"),
+        ("~/", "~~1"),
+        ("~~9", "~0~9"),
+        ("~\0", "~%00"),
+        ("~λ", "~%CE%BB"),
+        ("/~", "~1~"),
+        ("~", "%7E"),
+        ("~2", "%7e2"),
+        ("a~b", "a%7Eb"),
+        ("~~", "%7E%7E0"),
+    )
+        @testset "invalid escape $(repr(token))" begin
+            raw = Dict(
+                "definitions" => Dict(key => Dict("type" => "integer")),
+                "\$ref" => "#/definitions/" * token,
+            )
+            @test_throws ErrorException JSONSchema.Schema(raw)
+            @test raw["\$ref"] == "#/definitions/" * token
+        end
+    end
+    mktempdir() do dir
+        write(
+            joinpath(dir, "targets.json"),
+            JSONSchema.JSON.json(
+                Dict(
+                    "definitions" => Dict("a~2b" => Dict("type" => "integer")),
+                ),
+            ),
+        )
+        @test_throws ErrorException JSONSchema.Schema(
+            Dict("\$ref" => "targets.json#/definitions/a~2b");
+            parent_dir = dir,
+        )
+        schema = JSONSchema.Schema(
+            Dict("\$ref" => "targets.json#/definitions/a~02b");
+            parent_dir = dir,
+        )
+        @test JSONSchema.validate(schema, 1) === nothing
+        @test JSONSchema.validate(schema, "bad") isa JSONSchema.SingleIssue
+    end
+end
