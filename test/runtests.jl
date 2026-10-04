@@ -882,3 +882,70 @@ end
         @test JSONSchema.validate(schema, "bad") isa JSONSchema.SingleIssue
     end
 end
+
+@testset "Boolean instances ignore numeric assertions" begin
+    cases = (
+        ("multipleOf", 2, 4, 3),
+        ("maximum", 0, 0, 1),
+        ("minimum", 1, 1, 0),
+        ("exclusiveMaximum", 1, 0, 1),
+        ("exclusiveMinimum", 0, 1, 0),
+    )
+    for (keyword, limit, good, bad) in cases
+        raw = Dict(keyword => limit)
+        schema = JSONSchema.Schema(raw)
+        for value in (true, false)
+            @test JSONSchema.validate(schema, value) === nothing
+            @test isvalid(schema, value)
+            typed =
+                JSONSchema.Schema(Dict("type" => "boolean", keyword => limit))
+            @test JSONSchema.validate(typed, value) === nothing
+            array = JSONSchema.Schema(Dict("items" => raw))
+            @test JSONSchema.validate(array, [value]) === nothing
+            object =
+                JSONSchema.Schema(Dict("properties" => Dict("flag" => raw)))
+            @test JSONSchema.validate(object, Dict("flag" => value)) === nothing
+        end
+        @test JSONSchema.validate(schema, good) === nothing
+        issue = JSONSchema.validate(schema, bad)
+        @test issue isa JSONSchema.SingleIssue
+        @test issue.reason == keyword
+        @test issue.path == ""
+        @test JSONSchema.validate(schema, Float64(good)) === nothing
+        @test JSONSchema.validate(schema, Float64(bad)) isa
+              JSONSchema.SingleIssue
+        for value in ("text", nothing, [], Dict("a" => 1))
+            @test JSONSchema.validate(schema, value) === nothing
+        end
+    end
+    for (keyword, boundkey, bound) in (
+            ("exclusiveMaximum", "maximum", 0),
+            ("exclusiveMinimum", "minimum", 1),
+        ),
+        exclusive in (true, false)
+
+        schema =
+            JSONSchema.Schema(Dict(keyword => exclusive, boundkey => bound))
+        for value in (true, false)
+            @test JSONSchema.validate(schema, value) === nothing
+        end
+        @test (JSONSchema.validate(schema, bound) === nothing) == !exclusive
+    end
+    for typ in ("number", "integer"), value in (true, false)
+        @test JSONSchema.validate(
+            JSONSchema.Schema(Dict("type" => typ)),
+            value,
+        ) isa JSONSchema.SingleIssue
+    end
+    for value in (true, false)
+        schema = JSONSchema.Schema(
+            Dict(
+                "anyOf" => [
+                    Dict("type" => "boolean", "minimum" => 2),
+                    Dict("type" => "integer", "minimum" => 2),
+                ],
+            ),
+        )
+        @test JSONSchema.validate(schema, value) === nothing
+    end
+end

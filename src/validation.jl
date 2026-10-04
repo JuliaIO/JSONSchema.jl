@@ -609,6 +609,8 @@ end
 ### Checks for numbers.
 ###
 
+# Bool is a Julia Number, but JSON numeric assertions do not apply to booleans.
+
 # 6.2.1
 function _validate(
     x::Number,
@@ -617,6 +619,7 @@ function _validate(
     val::Number,
     path::_InstancePath,
 )
+    x isa Bool && return
     y = x / val
     if !isfinite(y) || !isapprox(y, round(y))
         return SingleIssue(x, path, "multipleOf", val)
@@ -632,6 +635,7 @@ function _validate(
     val::Number,
     path::_InstancePath,
 )
+    x isa Bool && return
     if x > val
         return SingleIssue(x, path, "maximum", val)
     end
@@ -646,6 +650,7 @@ function _validate(
     val::Number,
     path::_InstancePath,
 )
+    x isa Bool && return
     if x >= val
         return SingleIssue(x, path, "exclusiveMaximum", val)
     end
@@ -659,6 +664,7 @@ function _validate(
     val::Bool,
     path::_InstancePath,
 )
+    x isa Bool && return
     if val && x >= get(schema, "maximum", Inf)
         return SingleIssue(x, path, "exclusiveMaximum", val)
     end
@@ -673,6 +679,7 @@ function _validate(
     val::Number,
     path::_InstancePath,
 )
+    x isa Bool && return
     if x < val
         return SingleIssue(x, path, "minimum", val)
     end
@@ -687,6 +694,7 @@ function _validate(
     val::Number,
     path::_InstancePath,
 )
+    x isa Bool && return
     if x <= val
         return SingleIssue(x, path, "exclusiveMinimum", val)
     end
@@ -700,6 +708,7 @@ function _validate(
     val::Bool,
     path::_InstancePath,
 )
+    x isa Bool && return
     if val && x <= get(schema, "minimum", -Inf)
         return SingleIssue(x, path, "exclusiveMinimum", val)
     end
