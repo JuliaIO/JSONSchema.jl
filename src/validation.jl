@@ -589,7 +589,7 @@ _is_type(::Real, ::Val{:number}) = true
 _is_type(::Nothing, ::Val{:null}) = true
 _is_type(::Missing, ::Val{:null}) = true
 _is_type(::AbstractDict, ::Val{:object}) = true
-_is_type(::String, ::Val{:string}) = true
+_is_type(::AbstractString, ::Val{:string}) = true
 # Note that Julia treat's Bool <: Number, but JSON-Schema distinguishes them.
 _is_type(::Bool, ::Val{:number}) = false
 _is_type(::Bool, ::Val{:integer}) = false
@@ -726,7 +726,7 @@ end
 
 # 6.3.1
 function _validate(
-    x::String,
+    x::AbstractString,
     schema,
     ::Val{:maxLength},
     val::Union{Integer,Float64},
@@ -740,7 +740,7 @@ end
 
 # 6.3.2
 function _validate(
-    x::String,
+    x::AbstractString,
     schema,
     ::Val{:minLength},
     val::Union{Integer,Float64},
@@ -754,7 +754,7 @@ end
 
 # 6.3.3
 function _validate(
-    x::String,
+    x::AbstractString,
     schema,
     ::Val{:pattern},
     val::String,
