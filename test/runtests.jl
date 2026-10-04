@@ -398,3 +398,171 @@ include("generation.jl")
     @test issue.val === false
     @test JSONSchema.validate(schema, Dict("other" => "bad")) === nothing
 end
+
+function check_pointer(schema, data, path, pointer)
+    issue = JSONSchema.validate(JSONSchema.Schema(schema), data)
+    @test issue isa JSONSchema.SingleIssue
+    @test issue.path == path
+    @test JSONSchema.json_pointer(issue) == pointer
+    @test occursin(
+        "path:         " * (isempty(path) ? "top-level" : path),
+        sprint(show, issue),
+    )
+    return issue
+end
+
+@testset "JSON pointers for validation issues" begin
+    check_pointer(false, Dict("a" => 1), "", "#")
+    check_pointer(Dict("items" => false), [1], "", "#")
+    check_pointer(
+        Dict("items" => Dict("type" => "integer")),
+        [1, "bad"],
+        "[2]",
+        "#/1",
+    )
+    check_pointer(Dict("items" => [true, false]), [1, 2], "[2]", "#/1")
+    check_pointer(
+        Dict("items" => [true], "additionalItems" => Dict("type" => "integer")),
+        [1, "bad"],
+        "[2]",
+        "#/1",
+    )
+
+    for (key, pointer) in (
+        ("", "#/"),
+        ("1", "#/1"),
+        ("a/b", "#/a~1b"),
+        ("m~n", "#/m~0n"),
+        ("~1", "#/~01"),
+        ("c%d", "#/c%25d"),
+        ("e^f", "#/e%5Ef"),
+        ("g|h", "#/g%7Ch"),
+        ("i\\j", "#/i%5Cj"),
+        ("k\"l", "#/k%22l"),
+        (" ", "#/%20"),
+        ("a]", "#/a%5D"),
+        ("λ", "#/%CE%BB"),
+        ("#", "#/%23"),
+        ("\0", "#/%00"),
+    )
+        check_pointer(
+            Dict("properties" => Dict(key => false)),
+            Dict(key => 1),
+            "[$key]",
+            pointer,
+        )
+    end
+
+    nested = Dict(
+        "properties" => Dict(
+            "foo" => Dict(
+                "items" => Dict("properties" => Dict("bar" => false)),
+            ),
+        ),
+    )
+    issue = check_pointer(
+        nested,
+        Dict("foo" => [Dict("bar" => 1)]),
+        "[foo][1][bar]",
+        "#/foo/0/bar",
+    )
+    @test JSONSchema.json_pointer(issue) == "#/foo/0/bar"
+
+    recovered = Dict(
+        "allOf" => [
+            Dict("anyOf" => [nested, true]),
+            Dict("properties" => Dict("bar" => false)),
+        ],
+    )
+    check_pointer(
+        recovered,
+        Dict("foo" => [Dict("bar" => 1)], "bar" => 2),
+        "[bar]",
+        "#/bar",
+    )
+    check_pointer(
+        Dict("contains" => Dict("properties" => Dict("bar" => false))),
+        [Dict("bar" => 1)],
+        "",
+        "#",
+    )
+    check_pointer(
+        Dict(
+            "properties" =>
+                Dict("a" => Dict("properties" => Dict("1" => false))),
+        ),
+        Dict("a" => Dict("1" => 1)),
+        "[a][1]",
+        "#/a/1",
+    )
+    check_pointer(
+        Dict(
+            "properties" =>
+                Dict("a" => Dict("items" => Dict("type" => "string"))),
+        ),
+        Dict("a" => [1]),
+        "[a][1]",
+        "#/a/0",
+    )
+    check_pointer(
+        Dict(
+            "patternProperties" =>
+                Dict("^x" => Dict("items" => Dict("type" => "string"))),
+        ),
+        Dict("x]" => [1]),
+        "[x]][1]",
+        "#/x%5D/0",
+    )
+    check_pointer(
+        Dict("additionalProperties" => Dict("type" => "integer")),
+        Dict("a/b" => "bad"),
+        "[a/b]",
+        "#/a~1b",
+    )
+
+    branches = Dict(
+        "properties" => Dict(
+            "a" => Dict(
+                "anyOf" => [
+                    Dict("items" => Dict("type" => "string")),
+                    Dict("items" => Dict("type" => "number")),
+                ],
+            ),
+        ),
+    )
+    first_issue = check_pointer(branches, Dict("a" => [true]), "[a]", "#/a")
+    check_pointer(
+        Dict("properties" => Dict("b" => false)),
+        Dict("b" => 1),
+        "[b]",
+        "#/b",
+    )
+    @test JSONSchema.json_pointer(first_issue) == "#/a"
+    @test JSONSchema.json_pointer(issue) == "#/foo/0/bar"
+
+    conditional = Dict(
+        "properties" => Dict(
+            "a" => Dict(
+                "if" => Dict("type" => "object"),
+                "then" => Dict("properties" => Dict("b" => false)),
+            ),
+        ),
+    )
+    check_pointer(conditional, Dict("a" => Dict("b" => 1)), "[a][b]", "#/a/b")
+    reference = Dict(
+        "definitions" => Dict("bad" => false),
+        "properties" => Dict("a" => Dict("\$ref" => "#/definitions/bad")),
+    )
+    check_pointer(reference, Dict("a" => 1), "[a]", "#/a")
+    @test JSONSchema.validate(
+        JSONSchema.Schema(Dict("items" => Dict("type" => "integer"))),
+        [1, 2],
+    ) === nothing
+
+    legacy = JSONSchema.SingleIssue(1, "[1]", "type", "string")
+    @test legacy.path == "[1]"
+    @test_throws ArgumentError JSONSchema.json_pointer(legacy)
+    @test JSONSchema.json_pointer(
+        JSONSchema.SingleIssue(1, "", "type", "string"),
+    ) == "#"
+end
