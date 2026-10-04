@@ -949,3 +949,79 @@ end
         @test JSONSchema.validate(schema, value) === nothing
     end
 end
+
+@testset "JSON null equality" begin
+    cases = Any[
+        (nothing, nothing, true),
+        (missing, missing, true),
+        (nothing, missing, true),
+        (missing, nothing, true),
+        ([nothing], [missing], true),
+        (Any[missing, nothing], Any[nothing, missing], true),
+        (Dict("a" => missing), Dict("a" => nothing), true),
+        ([Dict("a" => missing)], [Dict("a" => nothing)], true),
+        (Dict("a" => [missing]), Dict("a" => [nothing]), true),
+        ([missing], [nothing, nothing], false),
+        (Dict("a" => missing), Dict("b" => nothing), false),
+        (0, 0.0, true),
+        (1, 1.0, true),
+        (false, 0, false),
+        (true, 1, false),
+        ([false], [0], false),
+        (Dict("a" => true), Dict("a" => 1), false),
+    ]
+    for null in (nothing, missing),
+        other in
+        (false, true, 0, 1, 0.0, 1.0, "", "null", Int[], Dict("a" => nothing))
+
+        push!(cases, (null, other, false))
+    end
+    for (x, y, equal) in cases
+        for (instance, expected) in ((x, y), (y, x))
+            for (keyword, constraint) in
+                (("const", expected), ("enum", Any[expected]))
+                @test begin
+                    result = JSONSchema.validate(
+                        JSONSchema.Schema(Dict(keyword => constraint)),
+                        instance,
+                    )
+                    equal ? result === nothing :
+                    result isa JSONSchema.SingleIssue
+                end
+            end
+        end
+        @test begin
+            result = JSONSchema.validate(
+                JSONSchema.Schema(Dict("uniqueItems" => true)),
+                Any[x, y],
+            )
+            equal ? result isa JSONSchema.SingleIssue : result === nothing
+        end
+    end
+    for null in (nothing, missing)
+        @test isvalid(JSONSchema.Schema(Dict("type" => "null")), null)
+        raw = Dict("enum" => Any[null])
+        JSONSchema.Schema(raw)
+        @test raw["enum"][1] === null
+        for (data, schema, path, pointer) in (
+            (
+                Dict("flag" => null),
+                Dict("properties" => Dict("flag" => Dict("const" => 0))),
+                "[flag]",
+                "#/flag",
+            ),
+            (Any[null], Dict("items" => Dict("enum" => Any[0])), "[1]", "#/0"),
+        )
+            @testset "null at $pointer" begin
+                parsed_schema = JSONSchema.Schema(schema)
+                @test JSONSchema.validate(parsed_schema, data) isa
+                      JSONSchema.SingleIssue
+                @test JSONSchema.validate(parsed_schema, data).x === null
+                @test JSONSchema.validate(parsed_schema, data).path == path
+                @test JSONSchema.json_pointer(
+                    JSONSchema.validate(parsed_schema, data),
+                ) == pointer
+            end
+        end
+    end
+end

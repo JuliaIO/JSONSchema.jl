@@ -184,7 +184,8 @@ _validate(::Any, ::Any, ::Val, ::Any, ::_InstancePath) = nothing
 #   true != 1
 #   0 == 0.0
 #   1.0 == 1
-_isequal(x, y) = x == y
+# Both nothing and missing represent JSON null; do not propagate missing from ==.
+_isequal(x, y) = (x === missing ? nothing : x) == (y === missing ? nothing : y)
 
 _isequal(::Bool, ::Number) = false
 
