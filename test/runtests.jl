@@ -1104,3 +1104,77 @@ end
         @test large_bytes <= small_bytes + 4096
     end
 end
+
+@testset "Array equality for const, enum, and uniqueItems" begin
+    equal = [
+        (Any[], Any[]),
+        ([1, 2, 3], [1.0, 2.0, 3.0]),
+        (Any[true, false, nothing], Any[true, false, missing]),
+        (
+            Any[[1, 2], Dict("x" => Any[true, nothing])],
+            Any[[1.0, 2.0], Dict("x" => Any[true, missing])],
+        ),
+        ([1, 2, 3], @view([0, 1, 2, 3, 4][2:4])),
+    ]
+    different = [
+        (Any[], [1]),
+        ([1], [1, 2]),
+        ([1, 2], [2, 1]),
+        ([true], [1]),
+        ([false], [0.0]),
+        (Any[[1, nothing]], Any[[1, false]]),
+        (Any[Dict("x" => [1])], Any[Dict("x" => [2])]),
+    ]
+    for (cases, expected) in ((equal, true), (different, false))
+        for (left, right) in cases,
+            (actual, reference) in ((left, right), (right, left))
+
+            for keyword in ("const", "enum")
+                schema = JSONSchema.Schema(
+                    Dict(
+                        keyword =>
+                            keyword == "const" ? reference : [reference],
+                    ),
+                )
+                @test isvalid(schema, actual) == expected
+                issue = JSONSchema.validate(schema, actual)
+                if !expected
+                    @test issue.reason == keyword
+                    @test issue.path == ""
+                    @test JSONSchema.json_pointer(issue) == "#"
+                end
+            end
+            @test isvalid(
+                JSONSchema.Schema(Dict("uniqueItems" => true)),
+                Any[left, right],
+            ) == !expected
+        end
+    end
+    nested = JSONSchema.Schema(
+        Dict("properties" => Dict("arr" => Dict("const" => [1, 2]))),
+    )
+    issue = JSONSchema.validate(nested, Dict("arr" => [1, 3]))
+    @test issue.reason == "const"
+    @test issue.path == "[arr]"
+    @test JSONSchema.json_pointer(issue) == "#/arr"
+    @test isvalid(nested, Dict("arr" => [1.0, 2.0]))
+
+    function allocated_validation(schema, input)
+        for _ in 1:3
+            JSONSchema.validate(schema, input)
+        end
+        return minimum([
+            @allocated JSONSchema.validate(schema, input) for _ in 1:3
+        ])
+    end
+    small_schema = JSONSchema.Schema(Dict("const" => ones(Int, 10)))
+    large_schema = JSONSchema.Schema(Dict("const" => ones(Int, 100_000)))
+    small_input = ones(Int, 10)
+    large_input = ones(Int, 100_000)
+    @test allocated_validation(large_schema, large_input) <=
+          allocated_validation(small_schema, small_input) + 4096
+    small_input[1] = 0
+    large_input[1] = 0
+    @test allocated_validation(large_schema, large_input) <=
+          allocated_validation(small_schema, small_input) + 4096
+end

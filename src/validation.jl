@@ -194,7 +194,7 @@ _isequal(::Number, ::Bool) = false
 _isequal(x::Bool, y::Bool) = x == y
 
 function _isequal(x::AbstractVector, y::AbstractVector)
-    return length(x) == length(y) && all(_isequal.(x, y))
+    return length(x) == length(y) && all(_isequal(a, b) for (a, b) in zip(x, y))
 end
 
 function _isequal(x::AbstractDict, y::AbstractDict)
