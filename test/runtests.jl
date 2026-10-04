@@ -1025,3 +1025,82 @@ end
         end
     end
 end
+
+@testset "Array item validation without length-sized bookkeeping" begin
+    for additional in (nothing, true, false, Dict("type" => "string"))
+        raw = Dict{String,Any}("items" => Dict("type" => "integer"))
+        additional === nothing || (raw["additionalItems"] = additional)
+        schema = JSONSchema.Schema(raw)
+        @test JSONSchema.validate(schema, Int[]) === nothing
+        @test JSONSchema.validate(schema, [1, 2, 3]) === nothing
+        @test JSONSchema.validate(schema, view([1, 2, 3], 2:3)) === nothing
+        issue = JSONSchema.validate(schema, Any[1, "wrong", 3])
+        @test issue isa JSONSchema.SingleIssue
+        @test issue.x == "wrong"
+        @test issue.reason == "type"
+        @test issue.path == "[2]"
+        @test JSONSchema.json_pointer(issue) == "#/1"
+    end
+    for prefix in (Any[], Any[true], Any[true, true, true]), n in 0:4
+        schema = JSONSchema.Schema(
+            Dict("items" => prefix, "additionalItems" => false),
+        )
+        @test isvalid(schema, fill(1, n)) == (n <= length(prefix))
+    end
+    prefix = Any[Dict("type" => "integer"), Dict("type" => "string")]
+    for additional in (nothing, true, false, Dict("type" => "string"))
+        raw = Dict{String,Any}("items" => prefix)
+        additional === nothing || (raw["additionalItems"] = additional)
+        schema = JSONSchema.Schema(raw)
+        @test JSONSchema.validate(schema, Any[]) === nothing
+        @test JSONSchema.validate(schema, [1]) === nothing
+        @test JSONSchema.validate(schema, Any[1, "ok"]) === nothing
+        @test isvalid(schema, Any[1, "ok", "tail"]) == (additional !== false)
+        @test isvalid(schema, Any[1, "ok", 3]) ==
+              (additional === nothing || additional === true)
+        issue = JSONSchema.validate(schema, Any[1, false])
+        @test issue.reason == "type"
+        @test issue.path == "[2]"
+        if additional === false
+            issue = JSONSchema.validate(schema, Any[1, "ok", "tail"])
+            @test issue.reason == "additionalItems"
+            @test issue.path == ""
+        end
+    end
+    schema = JSONSchema.Schema(
+        Dict(
+            "definitions" => Dict("text" => Dict("type" => "string")),
+            "properties" => Dict(
+                "values" => Dict(
+                    "items" => prefix,
+                    "additionalItems" =>
+                        Dict("\$ref" => "#/definitions/text"),
+                ),
+            ),
+        ),
+    )
+    issue = JSONSchema.validate(schema, Dict("values" => Any[1, "ok", false]))
+    @test issue.x === false
+    @test issue.reason == "type"
+    @test issue.path == "[values][3]"
+    @test JSONSchema.json_pointer(issue) == "#/values/2"
+    @test JSONSchema.validate(
+        schema,
+        Dict("values" => Any[1, "ok", "tail"]),
+    ) === nothing
+
+    uniform = JSONSchema.Schema(Dict("items" => Dict("type" => "integer")))
+    tuple_schema = JSONSchema.Schema(Dict("items" => Any[true]))
+    for (schema, small, large) in (
+        (uniform, fill("wrong", 1), fill("wrong", 100_000)),
+        (tuple_schema, fill(1, 1), fill(1, 100_000)),
+    )
+        for _ in 1:3
+            JSONSchema.validate(schema, small)
+            JSONSchema.validate(schema, large)
+        end
+        small_bytes = @allocated JSONSchema.validate(schema, small)
+        large_bytes = @allocated JSONSchema.validate(schema, large)
+        @test large_bytes <= small_bytes + 4096
+    end
+end

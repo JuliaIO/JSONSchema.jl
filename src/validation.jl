@@ -342,16 +342,13 @@ function _validate(
     val::AbstractDict,
     path::_InstancePath,
 )
-    items = fill(false, length(x))
     for (i, xi) in enumerate(x)
         ret = _validate_child(xi, val, path, i)
         if ret !== nothing
             return ret
         end
-        items[i] = true
     end
-    additionalItems = get(schema, "additionalItems", nothing)
-    return _additional_items(x, schema, items, additionalItems, path)
+    return
 end
 
 function _validate(
@@ -361,7 +358,6 @@ function _validate(
     val::AbstractVector,
     path::_InstancePath,
 )
-    items = fill(false, length(x))
     for (i, xi) in enumerate(x)
         if i > length(val)
             break
@@ -370,10 +366,9 @@ function _validate(
         if ret !== nothing
             return ret
         end
-        items[i] = true
     end
     additionalItems = get(schema, "additionalItems", nothing)
-    return _additional_items(x, schema, items, additionalItems, path)
+    return _additional_items(x, length(val), additionalItems, path)
 end
 
 function _validate(
@@ -389,11 +384,8 @@ function _validate(
     return
 end
 
-function _additional_items(x, schema, items, val, path)
-    for i in 1:length(x)
-        if items[i]
-            continue  # Validated against 'items'.
-        end
+function _additional_items(x, num_items, val, path)
+    for i in (num_items+1):length(x)
         ret = _validate_child(x[i], val, path, i)
         if ret !== nothing
             return ret
@@ -402,14 +394,14 @@ function _additional_items(x, schema, items, val, path)
     return
 end
 
-function _additional_items(x, schema, items, val::Bool, path)
-    if !val && !all(items)
+function _additional_items(x, num_items, val::Bool, path)
+    if !val && length(x) > num_items
         return SingleIssue(x, path, "additionalItems", val)
     end
     return
 end
 
-_additional_items(x, schema, items, val::Nothing, path) = nothing
+_additional_items(x, num_items, val::Nothing, path) = nothing
 
 # 9.3.1.2
 function _validate(
