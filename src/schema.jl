@@ -60,13 +60,16 @@ function _recurse_get_element(schema::AbstractDict, element::String)
 end
 
 function _recurse_get_element(schema::AbstractVector, element::String)
-    index = tryparse(Int, element)  # Remember that `index` is 0-indexed!
+    # JSON Pointer array indices are unsigned decimal without leading zeros.
+    index =
+        occursin(r"\A(?:0|[1-9][0-9]*)\z", element) ? tryparse(Int, element) :
+        nothing
     if index === nothing
         error("expected integer array index instead of '$(element)'.")
     elseif index >= length(schema)
         error("item index $(index) is larger than array $(schema).")
     end
-    return schema[index+1]
+    return schema[index+1]  # JSON Pointer indices are 0-indexed.
 end
 
 function get_remote_schema(uri::URIs.URI)

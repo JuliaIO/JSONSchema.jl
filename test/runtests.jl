@@ -733,3 +733,79 @@ end
         end
     end
 end
+
+@testset "Reference array index tokens" begin
+    targets = [Dict("type" => "integer"), Dict("type" => "string")]
+    for (token, accepted, rejected) in
+        (("0", 1, "bad"), ("1", "ok", 1), ("%30", 1, "bad"), ("%31", "ok", 1))
+        raw =
+            Dict("definitions" => targets, "\$ref" => "#/definitions/" * token)
+        schema = JSONSchema.Schema(raw)
+        @test JSONSchema.validate(schema, accepted) === nothing
+        @test JSONSchema.validate(schema, rejected) isa JSONSchema.SingleIssue
+        @test raw["\$ref"] == "#/definitions/" * token
+    end
+
+    for token in (
+        "",
+        "+0",
+        "+1",
+        "-0",
+        "-1",
+        "00",
+        "01",
+        " 0",
+        "0 ",
+        "0\n",
+        "0\r",
+        "\t0",
+        "0\t",
+        "0x0",
+        "1e0",
+        "０",
+        "١",
+        "%2B0",
+        "%2D0",
+        "%30%31",
+        "%200",
+        "0%0A",
+        "-",
+    )
+        @testset "invalid token $(repr(token))" begin
+            @test_throws ErrorException JSONSchema.Schema(
+                Dict(
+                    "definitions" => targets,
+                    "\$ref" => "#/definitions/" * token,
+                ),
+            )
+        end
+    end
+    for token in ("2", "9223372036854775807", "18446744073709551616")
+        @test_throws ErrorException JSONSchema.Schema(
+            Dict("definitions" => targets, "\$ref" => "#/definitions/" * token),
+        )
+    end
+    @test_throws ErrorException JSONSchema.Schema(
+        Dict("definitions" => Any[], "\$ref" => "#/definitions/0"),
+    )
+
+    for (key, token) in (
+        ("01", "01"),
+        ("+0", "+0"),
+        ("-1", "-1"),
+        (" 0", "%200"),
+        ("0\n", "0%0A"),
+        ("０", "%EF%BC%90"),
+        ("", ""),
+        ("-", "-"),
+    )
+        raw = Dict(
+            "definitions" => Dict(key => Dict("type" => "integer")),
+            "\$ref" => "#/definitions/" * token,
+        )
+        schema = JSONSchema.Schema(raw)
+        @test JSONSchema.validate(schema, 1) === nothing
+        @test JSONSchema.validate(schema, "bad") isa JSONSchema.SingleIssue
+        @test raw["\$ref"] == "#/definitions/" * token
+    end
+end
